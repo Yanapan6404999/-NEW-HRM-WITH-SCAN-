@@ -1,888 +1,1085 @@
 <!doctype html>
-<html>
+<html lang="th" data-theme="dark">
 <head>
-  <base target="_top">
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>HRM Check-in</title>
 
+  <!-- Tailwind -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"></script>
+
+  <!-- face-api.js -->
+  <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"></script>
 
   <style>
-    .overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:9999}
-    .card{border:1px solid rgba(148,163,184,.18)}
-    .btn{display:inline-flex;align-items:center;justify-content:center;gap:.5rem;border-radius:1rem;padding:.85rem 1rem;font-weight:800}
-    .btn:disabled{opacity:.55;cursor:not-allowed}
-    .pill{display:inline-flex;align-items:center;gap:.5rem;border-radius:999px;padding:.4rem .75rem;font-size:.75rem;border:1px solid rgba(148,163,184,.25)}
-    .kbd{border:1px solid rgba(148,163,184,.25);border-bottom-width:3px;border-radius:.6rem;padding:.1rem .4rem;font-size:.75rem}
-    .videoWrap{position:relative;border-radius:1.25rem;overflow:hidden}
-    canvas{position:absolute;inset:0}
+    :root{
+      --bg:#0b0f14; --card:#111827; --muted:#94a3b8; --text:#e5e7eb;
+      --line:rgba(148,163,184,.18);
+      --ok:#22c55e; --warn:#f59e0b; --bad:#ef4444; --brand:#f97316;
+      --shadow: 0 20px 50px rgba(0,0,0,.35);
+    }
+    html[data-theme="light"]{
+      --bg:#fff7ed; --card:#ffffff; --muted:#64748b; --text:#0f172a;
+      --line:rgba(15,23,42,.12);
+      --ok:#16a34a; --warn:#d97706; --bad:#dc2626; --brand:#f97316;
+      --shadow: 0 20px 50px rgba(2,6,23,.12);
+    }
+    body{ background: radial-gradient(900px 600px at 10% 10%, rgba(249,115,22,.18), transparent 55%),
+                  radial-gradient(800px 500px at 90% 20%, rgba(34,197,94,.10), transparent 55%),
+                  var(--bg);
+          color: var(--text); }
+    .card{ background: var(--card); border:1px solid var(--line); box-shadow: var(--shadow); }
+    .muted{ color: var(--muted); }
+    .pill{ border:1px solid var(--line); background: rgba(255,255,255,.04); }
+    html[data-theme="light"] .pill{ background: rgba(2,6,23,.03); }
+    .btn{ border:1px solid var(--line); }
+    .btn-brand{ background: var(--brand); border-color: rgba(0,0,0,.08); color:#fff; }
+    .btn-brand:hover{ filter:brightness(.97); }
+    .btn-soft:hover{ background: rgba(249,115,22,.10); border-color: rgba(249,115,22,.35); }
+    .kbd{ border:1px solid var(--line); padding:.12rem .45rem; border-radius:.5rem; font-size:.8rem; }
+    /* modal center */
+    .modal-backdrop{ position:fixed; inset:0; background: rgba(0,0,0,.55); display:none; z-index:50; }
+    .modal{ position:fixed; inset:0; display:none; z-index:60; }
+    .modal.show, .modal-backdrop.show{ display:block; }
   </style>
 </head>
 
-<body class="min-h-screen bg-slate-950 text-slate-100">
-  <!-- Loader -->
-  <div id="overlay" class="overlay">
-    <div class="bg-slate-900 card rounded-2xl p-5 w-[92vw] max-w-sm">
-      <div class="flex items-center gap-3">
-        <div class="w-3 h-3 rounded-full bg-emerald-400 animate-pulse"></div>
-        <div class="font-extrabold">กำลังทำงาน...</div>
-      </div>
-      <div class="text-slate-300 text-sm mt-2" id="overlayText">โปรดรอสักครู่</div>
-    </div>
-  </div>
+<body class="min-h-screen">
+  <div class="max-w-6xl mx-auto px-4 py-4 md:py-6">
 
-  <!-- Top Bar -->
-  <header class="sticky top-0 z-50 bg-slate-950/80 backdrop-blur border-b border-slate-800">
-    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap gap-3 items-center justify-between">
+    <!-- Top bar -->
+    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
       <div>
-        <div class="text-lg font-extrabold">HRM Check-in</div>
-        <div class="text-xs text-slate-400">Face Scan • GPS • Manual Log • ตรวจสอบการสแกนวันนี้</div>
+        <div class="flex items-center gap-3">
+          <div class="w-3 h-3 rounded-full" style="background:var(--ok)"></div>
+          <h1 class="text-xl md:text-2xl font-bold tracking-tight">HRM Check-in</h1>
+        </div>
+        <p class="muted text-sm mt-1">Face Scan + GPS + Manual Log + ตรวจสอบการสแกนวันนี้</p>
       </div>
 
-      <div class="flex flex-wrap items-center gap-2">
-        <a id="linkAdmin" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm font-semibold" href="#">Admin</a>
-        <a id="linkLeave" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm font-semibold" href="#">Leave</a>
-        <button id="btnHelp" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm font-semibold">วิธีใช้งาน</button>
-        <button id="btnTheme" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm font-semibold">โหมดกลางวัน</button>
-        <button id="btnSettings" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm font-semibold">ตั้งค่า URL</button>
+      <div class="flex flex-wrap gap-2 items-center">
+        <button id="btnTheme" class="btn btn-soft px-3 py-2 rounded-xl text-sm font-semibold pill">
+          โหมดกลางวัน/กลางคืน
+        </button>
+
+        <!-- Navigation (ใช้ anchor ตรง: จะสร้างจาก API URL ที่ตั้งไว้) -->
+        <a id="linkAdmin" href="#" class="btn px-3 py-2 rounded-xl text-sm font-semibold pill">Admin</a>
+        <a id="linkLeave" href="#" class="btn px-3 py-2 rounded-xl text-sm font-semibold pill">Leave</a>
+
+        <button id="btnHelp" class="btn btn-soft px-3 py-2 rounded-xl text-sm font-semibold pill">
+          วิธีใช้งาน
+        </button>
+        <button id="btnOpenSettings" class="btn btn-soft px-3 py-2 rounded-xl text-sm font-semibold pill">
+          ตั้งค่า URL
+        </button>
       </div>
     </div>
-  </header>
 
-  <main class="max-w-7xl mx-auto px-4 py-5">
-    <!-- Status + API -->
-    <div class="flex flex-wrap items-center gap-2 mb-4">
-      <span id="pill" class="pill bg-slate-900 border-slate-800 text-slate-300">
-        <span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
-        กำลังเตรียมระบบ...
-      </span>
+    <!-- Status row -->
+    <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div class="card rounded-2xl p-4">
+        <div class="text-sm font-semibold">สถานะระบบ</div>
+        <div class="mt-2 flex flex-wrap gap-2 text-xs">
+          <span id="stModel" class="pill px-2 py-1 rounded-full">Model: กำลังโหลด…</span>
+          <span id="stCam" class="pill px-2 py-1 rounded-full">Camera: ปิด</span>
+          <span id="stGps" class="pill px-2 py-1 rounded-full">GPS: ยังไม่ได้ดึง</span>
+          <span id="stZone" class="pill px-2 py-1 rounded-full">พื้นที่: ยังไม่ตรวจ</span>
+        </div>
+        <div class="muted text-xs mt-2">
+          * ถ้าเคยกดปฏิเสธกล้อง/GPS ให้กด <span class="kbd">เปิดกล้อง</span> และ <span class="kbd">ดึง GPS</span> ใหม่
+        </div>
+      </div>
 
-      <span class="text-xs text-slate-400">API:</span>
-      <a id="apiLink" class="text-xs text-sky-300 hover:underline break-all" href="#" target="_blank" rel="noopener">-</a>
+      <div class="card rounded-2xl p-4">
+        <div class="text-sm font-semibold">API</div>
+        <div class="mt-2 text-xs break-all muted">
+          <div><span class="font-semibold">URL:</span> <span id="stApiUrl">ยังไม่ตั้งค่า</span></div>
+          <div class="mt-1"><span class="font-semibold">Ping:</span> <span id="stPing">-</span></div>
+        </div>
+        <div class="mt-3 flex gap-2">
+          <button id="btnPing" class="btn px-3 py-2 rounded-xl text-sm font-semibold pill">ทดสอบ ping</button>
+          <button id="btnSyncEmp" class="btn px-3 py-2 rounded-xl text-sm font-semibold pill">ซิงค์พนักงาน</button>
+        </div>
+        <div class="muted text-xs mt-2">
+          * บน GitHub Pages จะเรียกแบบ JSONP (แก้ CORS)
+        </div>
+      </div>
 
-      <span class="pill bg-slate-900 border-slate-800 text-slate-300">
-        <span class="font-bold">GPS:</span>
-        <span id="gpsText" class="text-slate-300">ยังไม่ได้ดึง</span>
-      </span>
-
-      <span class="pill bg-slate-900 border-slate-800 text-slate-300">
-        <span class="font-bold">พื้นที่:</span>
-        <span id="zoneText" class="text-slate-300">-</span>
-      </span>
+      <div class="card rounded-2xl p-4">
+        <div class="text-sm font-semibold">ตั้งค่าพื้นที่ (GPS)</div>
+        <div class="mt-2 text-xs muted">
+          <div><span class="font-semibold">ศูนย์กลาง:</span> <span id="stCenter">-</span></div>
+          <div class="mt-1"><span class="font-semibold">รัศมีอนุญาต:</span> <span id="stRadius">-</span></div>
+          <div class="mt-1"><span class="font-semibold">ระยะห่างล่าสุด:</span> <span id="stDist">-</span></div>
+        </div>
+      </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <!-- LEFT: Camera + Face Scan -->
-      <section class="bg-slate-900 card rounded-2xl p-4">
-        <div class="flex flex-wrap items-end justify-between gap-2">
+    <!-- Main grid -->
+    <div class="mt-4 grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+      <!-- LEFT: Camera + Face -->
+      <div class="card rounded-2xl p-4">
+        <div class="flex items-start justify-between gap-3">
           <div>
-            <div class="font-extrabold text-lg">สแกนใบหน้าเข้างาน</div>
-            <div class="text-xs text-slate-400">ต้องอนุญาตกล้อง + GPS ก่อน • ระบบจะตรวจสอบพื้นที่</div>
+            <div class="text-base font-bold">สแกนใบหน้าเข้างาน</div>
+            <div class="muted text-sm">กล้อง + GPS ก่อน แล้วกดสแกน</div>
           </div>
-          <div class="flex flex-wrap gap-2">
-            <button id="btnStartCam" class="btn bg-emerald-600 hover:bg-emerald-500 text-sm">เปิดกล้อง</button>
-            <button id="btnStopCam" class="btn bg-slate-800 hover:bg-slate-700 text-sm">ปิดกล้อง</button>
-            <button id="btnGPS" class="btn bg-sky-600 hover:bg-sky-500 text-sm">ดึง GPS</button>
+          <div class="flex gap-2">
+            <button id="btnOpenCam" class="btn btn-soft px-3 py-2 rounded-xl text-sm font-semibold pill">เปิดกล้อง</button>
+            <button id="btnCloseCam" class="btn px-3 py-2 rounded-xl text-sm font-semibold pill">ปิดกล้อง</button>
+            <button id="btnGetGps" class="btn px-3 py-2 rounded-xl text-sm font-semibold pill">ดึง GPS</button>
           </div>
         </div>
 
-        <div class="mt-4 videoWrap border border-slate-800 bg-slate-950">
-          <video id="video" autoplay muted playsinline class="w-full h-[320px] md:h-[420px] object-cover"></video>
-          <canvas id="canvas"></canvas>
+        <div class="mt-3 relative rounded-2xl overflow-hidden border" style="border-color:var(--line);">
+          <video id="video" autoplay muted playsinline class="w-full bg-black" style="aspect-ratio: 16/10;"></video>
+          <canvas id="overlay" class="absolute inset-0 w-full h-full"></canvas>
         </div>
 
-        <div class="mt-3 flex flex-wrap items-center gap-2">
-          <span class="pill bg-slate-950 border-slate-800 text-slate-300">
-            <span class="font-bold">Model:</span>
-            <span id="modelText">ยังไม่โหลด</span>
-          </span>
-          <span class="pill bg-slate-950 border-slate-800 text-slate-300">
-            <span class="font-bold">Camera:</span>
-            <span id="camText">ยังไม่เริ่ม</span>
-          </span>
-        </div>
-
-        <div class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-2">
-          <button id="btnFaceCheckIn" class="btn bg-emerald-600 hover:bg-emerald-500 text-base md:text-lg">
+        <div class="mt-3 flex flex-col md:flex-row gap-2">
+          <button id="btnScanFace" class="btn btn-brand px-4 py-3 rounded-2xl text-base font-bold">
             สแกนใบหน้าเข้างาน
           </button>
-          <button id="btnManualToggle" class="btn bg-slate-800 hover:bg-slate-700 text-base md:text-lg">
-            บันทึกด้วยมือ (สำรอง)
+
+          <button id="btnAdminUnlock" class="btn px-4 py-3 rounded-2xl text-base font-bold pill">
+            ปลดล็อกแอดมิน (บันทึกใบหน้า)
           </button>
         </div>
 
-        <div id="faceResult" class="mt-3 text-sm text-slate-200 whitespace-pre-wrap"></div>
+        <div id="faceResult" class="mt-3 text-sm"></div>
 
-        <div class="mt-4 p-3 rounded-2xl bg-slate-950 border border-slate-800">
-          <div class="font-bold">บันทึกใบหน้า (ครั้งแรก)</div>
-          <div class="text-xs text-slate-400 mt-1">
-            ใช้สำหรับพนักงานที่ยังไม่เคยบันทึกใบหน้า • ต้องยินยอมก่อนบันทึก
-          </div>
-
-          <div class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-2">
-            <input id="regCode" class="px-3 py-3 rounded-xl bg-slate-900 border border-slate-800 text-sm"
-                   placeholder="รหัสพนักงาน เช่น EMP001">
-            <label class="flex items-center gap-2 px-3 py-3 rounded-xl bg-slate-900 border border-slate-800 text-sm">
-              <input id="consent" type="checkbox" class="scale-125">
-              ยินยอมให้บันทึกใบหน้า
-            </label>
-            <button id="btnRegisterFace" class="btn bg-sky-600 hover:bg-sky-500 text-sm">
+        <!-- enroll -->
+        <div class="mt-4 border-t pt-4" style="border-color:var(--line);">
+          <div class="text-sm font-bold">บันทึกใบหน้า (สำหรับคนยังไม่เคยบันทึก)</div>
+          <div class="muted text-xs mt-1">ต้องปลดล็อกแอดมินก่อน แล้วใส่รหัสพนักงาน</div>
+          <div class="mt-2 flex flex-col md:flex-row gap-2">
+            <input id="enrollCode" class="w-full md:w-64 px-3 py-2 rounded-xl bg-transparent border"
+                   style="border-color:var(--line);" placeholder="รหัสพนักงาน เช่น EMP001" />
+            <button id="btnEnrollFace" class="btn btn-soft px-4 py-2 rounded-xl text-sm font-semibold pill">
               บันทึกใบหน้า
             </button>
+            <button id="btnCheckEnroll" class="btn px-4 py-2 rounded-xl text-sm font-semibold pill">
+              ตรวจสอบว่าบันทึกแล้วไหม
+            </button>
           </div>
-
-          <div id="regResult" class="mt-2 text-xs text-slate-300 whitespace-pre-wrap"></div>
+          <div id="enrollResult" class="mt-2 text-sm"></div>
         </div>
-      </section>
+      </div>
 
       <!-- RIGHT: Today Check + Manual -->
-      <section class="bg-slate-900 card rounded-2xl p-4">
-        <div class="font-extrabold text-lg">ตรวจสอบการสแกนวันนี้</div>
-        <div class="text-xs text-slate-400">ใส่รหัสพนักงานเพื่อดูเวลา T1–T4 + Extra และสถานะ</div>
+      <div class="card rounded-2xl p-4">
+        <div class="text-base font-bold">ตรวจสอบการสแกนวันนี้ (T1–T4 + Extra)</div>
+        <div class="muted text-sm">ให้พนักงานเช็กเองกันลืมสแกน</div>
 
-        <div class="mt-3 grid grid-cols-1 md:grid-cols-3 gap-2">
-          <input id="chkCode" class="px-3 py-3 rounded-xl bg-slate-950 border border-slate-800 text-sm"
-                 placeholder="รหัสพนักงาน เช่น EMP001">
-          <button id="btnCheckToday" class="btn bg-emerald-600 hover:bg-emerald-500 text-sm">
+        <div class="mt-3 flex flex-col md:flex-row gap-2">
+          <input id="chkCode" class="w-full md:w-72 px-3 py-2 rounded-xl bg-transparent border"
+                 style="border-color:var(--line);" placeholder="รหัสพนักงาน เช่น EMP001" />
+          <button id="btnCheckToday" class="btn btn-brand px-4 py-2 rounded-xl text-sm font-bold">
             ตรวจสอบ
           </button>
-          <button id="btnClearToday" class="btn bg-slate-800 hover:bg-slate-700 text-sm">
-            ล้าง
-          </button>
+          <button id="btnClearToday" class="btn px-4 py-2 rounded-xl text-sm font-semibold pill">ล้าง</button>
         </div>
 
-        <div class="mt-3 p-3 rounded-2xl bg-slate-950 border border-slate-800">
-          <div class="text-sm font-bold" id="todayTitle">-</div>
-          <div class="text-xs text-slate-400 mt-1" id="todayMeta">-</div>
-
-          <div class="mt-3 overflow-auto rounded-2xl border border-slate-800">
-            <table class="min-w-[760px] w-full text-sm">
-              <thead class="bg-slate-900">
-                <tr class="text-slate-300">
-                  <th class="p-3 text-left">ช่วง</th>
-                  <th class="p-3 text-left">เวลา</th>
-                  <th class="p-3 text-left">วิธี</th>
-                  <th class="p-3 text-left">สถานะ</th>
-                  <th class="p-3 text-left">หมายเหตุ</th>
-                </tr>
-              </thead>
-              <tbody id="todayBody" class="divide-y divide-slate-800 bg-slate-950">
-                <tr><td class="p-3 text-slate-400" colspan="5">ยังไม่มีข้อมูล</td></tr>
-              </tbody>
-            </table>
-          </div>
-
-          <div class="mt-2 text-xs text-slate-400">
-            * ถ้าเป็น Extra: แสดง “รอ admin ตรวจสอบ” เพื่อกันพนักงานเข้าใจผิด
-          </div>
+        <div class="mt-3 overflow-hidden rounded-2xl border" style="border-color:var(--line);">
+          <table class="w-full text-sm">
+            <thead class="text-xs uppercase muted" style="background:rgba(255,255,255,.04);">
+              <tr>
+                <th class="text-left px-3 py-2">ช่วง</th>
+                <th class="text-left px-3 py-2">เวลา</th>
+                <th class="text-left px-3 py-2">วิธี</th>
+                <th class="text-left px-3 py-2">สถานะ</th>
+              </tr>
+            </thead>
+            <tbody id="todayRows">
+              <tr><td class="px-3 py-3 muted" colspan="4">ยังไม่มีข้อมูล</td></tr>
+            </tbody>
+          </table>
         </div>
 
-        <!-- Manual Log (hidden by default) -->
-        <div id="manualBox" class="mt-4 hidden p-3 rounded-2xl bg-slate-950 border border-slate-800">
-          <div class="font-bold">บันทึกด้วยมือ (สำรอง)</div>
-          <div class="text-xs text-slate-400 mt-1">ใช้กรณีกล้องสแกนไม่ได้ • ระบบยังตรวจ GPS</div>
+        <div id="todayMeta" class="mt-2 text-xs muted"></div>
+
+        <!-- Manual log -->
+        <div class="mt-5 border-t pt-4" style="border-color:var(--line);">
+          <div class="text-base font-bold">บันทึกด้วยมือ (สำรอง)</div>
+          <div class="muted text-sm">ใช้กรณีสแกนไม่ติด / เน็ตช้า</div>
 
           <div class="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2">
-            <input id="m_code" class="px-3 py-3 rounded-xl bg-slate-900 border border-slate-800 text-sm"
-                   placeholder="รหัสพนักงาน">
-            <input id="m_note" class="px-3 py-3 rounded-xl bg-slate-900 border border-slate-800 text-sm"
-                   placeholder="หมายเหตุ (ถ้ามี)">
+            <input id="mlCode" class="px-3 py-2 rounded-xl bg-transparent border"
+                   style="border-color:var(--line);" placeholder="รหัสพนักงาน" />
+            <input id="mlNote" class="px-3 py-2 rounded-xl bg-transparent border"
+                   style="border-color:var(--line);" placeholder="หมายเหตุ (ถ้ามี)" />
           </div>
 
-          <div class="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
-            <label class="px-3 py-3 rounded-xl bg-slate-900 border border-slate-800 text-sm">
-              แนบหลักฐาน (ถ้ามี)
-              <input id="m_file" type="file" accept="image/*" class="block mt-2 text-xs">
-            </label>
-            <button id="btnManualSave" class="btn bg-amber-600 hover:bg-amber-500 text-sm">
+          <div class="mt-3 flex gap-2">
+            <button id="btnManualLog" class="btn btn-brand px-4 py-3 rounded-2xl text-base font-bold">
               บันทึกด้วยมือ
             </button>
           </div>
 
-          <div id="manualResult" class="mt-2 text-xs text-slate-300 whitespace-pre-wrap"></div>
+          <div id="manualResult" class="mt-2 text-sm"></div>
+
+          <div class="muted text-xs mt-2">
+            * ถ้ามี Extra: ระบบจะแสดง “รอ admin ตรวจสอบ” ในหน้าตรวจสอบวันนี้
+          </div>
         </div>
-      </section>
-    </div>
-
-    <!-- Console -->
-    <div class="mt-4 bg-slate-900 card rounded-2xl p-4">
-      <div class="font-bold">Console</div>
-      <pre id="console" class="mt-2 text-xs text-slate-300 whitespace-pre-wrap"></pre>
-    </div>
-  </main>
-
-  <!-- Settings Modal -->
-  <div id="settingsBack" class="fixed inset-0 bg-black/60 hidden items-center justify-content-center p-4 z-[9998]">
-    <div class="bg-slate-900 card rounded-2xl p-4 w-[92vw] max-w-xl">
-      <div class="flex items-center justify-between gap-3">
-        <div class="font-extrabold">ตั้งค่า URL</div>
-        <button id="btnCloseSettings" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm font-semibold">ปิด</button>
-      </div>
-      <div class="h-px bg-slate-800 my-3"></div>
-
-      <label class="text-xs text-slate-400">Apps Script Web App URL (ลงท้าย /exec)</label>
-      <input id="apiInput" class="mt-1 w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-sm"
-             placeholder="https://script.google.com/macros/s/XXXXX/exec" />
-
-      <div class="mt-3 flex flex-wrap gap-2">
-        <button id="btnSaveSettings" class="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-sm font-bold">บันทึก</button>
-        <button id="btnPing" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm font-semibold">ทดสอบ ping</button>
       </div>
 
-      <div class="text-xs text-slate-400 mt-3 leading-5">
-        * ลิงก์นำทางต้องเป็น <span class="kbd">?page=</span> เช่น <span class="kbd">?page=admin</span> ตามกติกาโปรเจค
+    </div>
+
+    <div class="muted text-xs mt-5">
+      เคล็ดลับ: ถ้าเปิดกล้องไม่ได้ ให้กดไอคอน 🔒 ข้าง URL ใน Chrome → Site settings → Allow Camera/Microphone/Location แล้วรีเฟรช
+    </div>
+  </div>
+
+  <!-- SETTINGS MODAL (center) -->
+  <div id="backdrop" class="modal-backdrop"></div>
+  <div id="settingsModal" class="modal">
+    <div class="min-h-screen flex items-center justify-center px-4">
+      <div class="card w-full max-w-xl rounded-2xl p-5">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <div class="text-lg font-bold">ตั้งค่า URL + พื้นที่ GPS</div>
+            <div class="muted text-sm mt-1">สำหรับ GitHub Pages ให้ใส่ Web App URL ที่ลงท้ายด้วย <b>/exec</b></div>
+          </div>
+          <button id="btnCloseSettings" class="btn px-3 py-2 rounded-xl text-sm font-semibold pill">ปิด</button>
+        </div>
+
+        <div class="mt-4">
+          <label class="text-sm font-semibold">Apps Script Web App URL</label>
+          <input id="apiUrlInput" class="mt-2 w-full px-3 py-2 rounded-xl bg-transparent border"
+                 style="border-color:var(--line);" placeholder="https://script.google.com/macros/s/XXXX/exec" />
+          <div class="muted text-xs mt-2">
+            โหมด GitHub จะเรียกผ่าน JSONP: <span class="kbd">?action=...&payload=...&callback=...</span>
+          </div>
+        </div>
+
+        <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-2">
+          <div>
+            <label class="text-sm font-semibold">ศูนย์กลาง lat</label>
+            <input id="centerLat" class="mt-2 w-full px-3 py-2 rounded-xl bg-transparent border"
+                   style="border-color:var(--line);" />
+          </div>
+          <div>
+            <label class="text-sm font-semibold">ศูนย์กลาง lng</label>
+            <input id="centerLng" class="mt-2 w-full px-3 py-2 rounded-xl bg-transparent border"
+                   style="border-color:var(--line);" />
+          </div>
+          <div>
+            <label class="text-sm font-semibold">รัศมี (เมตร)</label>
+            <input id="radiusM" class="mt-2 w-full px-3 py-2 rounded-xl bg-transparent border"
+                   style="border-color:var(--line);" />
+          </div>
+        </div>
+
+        <div class="mt-4 flex flex-wrap gap-2">
+          <button id="btnSaveSettings" class="btn btn-brand px-4 py-2 rounded-xl text-sm font-bold">
+            บันทึก
+          </button>
+          <button id="btnDefaultSettings" class="btn px-4 py-2 rounded-xl text-sm font-semibold pill">
+            ค่าเริ่มต้น (ต.แสงชัยชุมแพ)
+          </button>
+        </div>
+
+        <div id="settingsMsg" class="mt-3 text-sm"></div>
       </div>
     </div>
   </div>
 
-  <!-- Help Modal -->
-  <div id="helpBack" class="fixed inset-0 bg-black/60 hidden items-center justify-content-center p-4 z-[9998]">
-    <div class="bg-slate-900 card rounded-2xl p-4 w-[92vw] max-w-2xl">
-      <div class="flex items-center justify-between gap-3">
-        <div class="font-extrabold">วิธีใช้งาน (สั้นๆ แต่ครบ)</div>
-        <button id="btnCloseHelp" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sm font-semibold">ปิด</button>
-      </div>
-      <div class="h-px bg-slate-800 my-3"></div>
+  <!-- HELP MODAL -->
+  <div id="helpModal" class="modal">
+    <div class="min-h-screen flex items-center justify-center px-4">
+      <div class="card w-full max-w-2xl rounded-2xl p-5">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <div class="text-lg font-bold">วิธีใช้งาน (สั้น ๆ)</div>
+            <div class="muted text-sm mt-1">ทำตามลำดับนี้จะไม่หลง</div>
+          </div>
+          <button id="btnCloseHelp" class="btn px-3 py-2 rounded-xl text-sm font-semibold pill">ปิด</button>
+        </div>
 
-      <ol class="list-decimal pl-5 space-y-2 text-sm text-slate-200">
-        <li>กด <b>ตั้งค่า URL</b> ใส่ URL /exec ของระบบ แล้วกด <b>ทดสอบ ping</b></li>
-        <li>กด <b>ดึง GPS</b> (ต้องกดอนุญาตตำแหน่ง) → ดูว่า “อยู่ในพื้นที่” ขึ้นว่าอะไร</li>
-        <li>กด <b>เปิดกล้อง</b> (ถ้ากดปฏิเสธพลาด กดเปิดกล้องใหม่ได้)</li>
-        <li>กด <b>สแกนใบหน้าเข้างาน</b> → ระบบส่ง descriptor + GPS ไปบันทึก</li>
-        <li>ครั้งแรกให้บันทึกใบหน้า: ใส่รหัส + ติ๊กยินยอม + กด <b>บันทึกใบหน้า</b></li>
-        <li>ตรวจสอบว่า “สแกนไปยัง”: ใส่รหัสที่ช่อง <b>ตรวจสอบการสแกนวันนี้</b></li>
-        <li>ถ้ากล้องมีปัญหา ใช้ <b>บันทึกด้วยมือ (สำรอง)</b> แล้วค่อยให้ admin ตรวจสอบ</li>
-      </ol>
+        <ol class="mt-4 text-sm leading-7 list-decimal pl-5">
+          <li>กด <b>ตั้งค่า URL</b> แล้วใส่ Web App URL (ลงท้าย /exec) → กด <b>บันทึก</b></li>
+          <li>กด <b>ทดสอบ ping</b> ถ้าขึ้น pong แปลว่า API พร้อม</li>
+          <li>กด <b>เปิดกล้อง</b> และ <b>ดึง GPS</b> (ต้อง Allow ในเบราว์เซอร์)</li>
+          <li>กด <b>สแกนใบหน้าเข้างาน</b> → ระบบจะจับคู่ใบหน้ากับพนักงานที่ซิงค์ไว้ แล้วบันทึกเวลา</li>
+          <li>ถ้าสแกนไม่ติด ใช้ <b>บันทึกด้วยมือ</b> (สำรอง)</li>
+          <li>พนักงานตรวจสอบเองได้ที่กล่อง <b>ตรวจสอบการสแกนวันนี้</b></li>
+        </ol>
 
-      <div class="mt-3 text-xs text-slate-400">
-        ถ้ากดอนุญาตกล้อง/ตำแหน่งผิด: ไปที่การตั้งค่าเบราว์เซอร์ → Site settings → Allow camera/location แล้วรีเฟรช
+        <div class="mt-4 muted text-xs">
+          ถ้าเคยกด “Block” กล้อง/GPS: ใน Chrome → คลิก 🔒 หน้า URL → Site settings → Allow → รีเฟรช
+        </div>
       </div>
     </div>
   </div>
 
 <script>
-/** =========================================================
- * CONFIG
- * ========================================================= */
-const DEFAULT_API_URL = "https://script.google.com/macros/s/PUT_YOUR_DEPLOY_ID/exec";
-const LS_KEY = "hrm_api_url_v3"; // ใช้ key เดียวกับ admin.html
+/** =========================
+ *  CONFIG / STORAGE
+ *  ========================= */
+const LS_API = 'attendance_api_url_v2'; // คงชื่อเดิมไว้
+const LS_THEME = 'hrm_theme_v1';
+const LS_EMP_CACHE = 'hrm_emp_face_cache_v1';
+const LS_GEO_CFG = 'hrm_geo_cfg_v1';
 
-// ปรับชื่อ action ให้ตรง Code.gs ของคุณได้ที่นี่ “จุดเดียว”
-const API_ACTIONS = {
-  ping: "ping",
-  getInitialData: "getInitialData",
+const FACE_THRESHOLD = 0.55; // ตามสเปคเดิม
+const MODEL_URL = './models'; // models อยู่ใน repo (GitHub Pages)
 
-  // Face
-  faceCheckIn: "faceCheckIn",          // {faceDescriptor, lat, lng, accuracy}
-  uploadEmployeeFace: "uploadEmployeeFace", // {code, faceDescriptor}
-
-  // Today check
-  getTodayByCode: "getTodayByCode",    // {code} -> {employee, today}
-  // ถ้า Code.gs ใช้ชื่อ checkTodayByCode ให้เปลี่ยนคีย์บนนี้เป็น "checkTodayByCode" แล้วแก้ด้านล่างใน call ด้วย
-
-  // Manual
-  saveManualLog: "saveManualLog",      // {code, note, lat, lng, evidenceBase64?, evidenceName?, evidenceMime?}
+const defaultGeo = {
+  centerLat: 17.414800,
+  centerLng: 102.787000,
+  radiusM: 5000
 };
 
-let API_URL = localStorage.getItem(LS_KEY) || DEFAULT_API_URL;
+let apiUrl = '';
+let geoCfg = loadGeoCfg();
+let gps = null; // {lat,lng,acc}
+let camStream = null;
+let modelsLoaded = false;
+let adminUnlocked = false;
+let adminSession = null; // จะให้ GS ส่งกลับมา (ขั้นถัดไปทำใน Code.gs)
+let empCache = loadEmpCache(); // {updatedAt, employees:[{code,fullName,faceDataB64}]}
 
-/** =========================================================
- * DOM helpers
- * ========================================================= */
-const el = (id)=>document.getElementById(id);
-const overlay = el("overlay");
-const overlayText = el("overlayText");
-const pill = el("pill");
-const consoleEl = el("console");
+/** =========================
+ *  DOM
+ *  ========================= */
+const $ = (id) => document.getElementById(id);
 
-function escapeHtml(s){
-  return String(s||"")
-    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
-    .replace(/"/g,"&quot;");
-}
+const stModel = $('stModel');
+const stCam = $('stCam');
+const stGps = $('stGps');
+const stZone = $('stZone');
+const stApiUrl = $('stApiUrl');
+const stPing = $('stPing');
 
-function setPill(text, color="amber"){
-  const dot = color==="emerald" ? "bg-emerald-400" : (color==="rose" ? "bg-rose-400" : "bg-amber-400");
-  pill.innerHTML = `<span class="w-2.5 h-2.5 rounded-full ${dot}"></span>${escapeHtml(text)}`;
-}
+const stCenter = $('stCenter');
+const stRadius = $('stRadius');
+const stDist = $('stDist');
 
-function log(msg){
-  consoleEl.textContent = `[${new Date().toLocaleString()}] ${msg}\n` + consoleEl.textContent;
-}
+const video = $('video');
+const overlay = $('overlay');
+const faceResult = $('faceResult');
+const enrollResult = $('enrollResult');
+const manualResult = $('manualResult');
+const todayRows = $('todayRows');
+const todayMeta = $('todayMeta');
 
-function showOverlay(text="กำลังทำงาน..."){
-  overlayText.textContent = text;
-  overlay.style.display = "flex";
-}
-function hideOverlay(){ overlay.style.display = "none"; }
+const backdrop = $('backdrop');
+const settingsModal = $('settingsModal');
+const helpModal = $('helpModal');
 
-function refreshLinks(){
-  el("apiLink").href = API_URL;
-  el("apiLink").textContent = API_URL;
-  el("linkAdmin").href = API_URL + "?page=admin";
-  el("linkLeave").href = API_URL + "?page=leave";
-}
-refreshLinks();
+/** =========================
+ *  INIT
+ *  ========================= */
+init();
 
-async function postJson(body){
-  const res = await fetch(API_URL, {
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify(body)
+async function init(){
+  // theme
+  const savedTheme = localStorage.getItem(LS_THEME);
+  if (savedTheme) document.documentElement.setAttribute('data-theme', savedTheme);
+
+  // api url
+  apiUrl = (localStorage.getItem(LS_API) || '').trim();
+  renderApiUrl();
+  renderGeoCfg();
+  renderNavLinks();
+
+  // bind
+  $('btnTheme').addEventListener('click', toggleTheme);
+
+  $('btnOpenSettings').addEventListener('click', () => openModal('settings'));
+  $('btnCloseSettings').addEventListener('click', closeModals);
+  backdrop.addEventListener('click', closeModals);
+
+  $('btnHelp').addEventListener('click', () => openModal('help'));
+  $('btnCloseHelp').addEventListener('click', closeModals);
+
+  $('btnSaveSettings').addEventListener('click', saveSettings);
+  $('btnDefaultSettings').addEventListener('click', () => applyDefaultSettings(true));
+
+  $('btnPing').addEventListener('click', onPing);
+  $('btnSyncEmp').addEventListener('click', onSyncEmployees);
+
+  $('btnOpenCam').addEventListener('click', startCamera);
+  $('btnCloseCam').addEventListener('click', stopCamera);
+  $('btnGetGps').addEventListener('click', getGps);
+
+  $('btnScanFace').addEventListener('click', onScanFace);
+
+  $('btnAdminUnlock').addEventListener('click', onAdminUnlock);
+  $('btnEnrollFace').addEventListener('click', onEnrollFace);
+  $('btnCheckEnroll').addEventListener('click', onCheckEnroll);
+
+  $('btnManualLog').addEventListener('click', onManualLog);
+
+  $('btnCheckToday').addEventListener('click', onCheckToday);
+  $('btnClearToday').addEventListener('click', () => {
+    todayRows.innerHTML = `<tr><td class="px-3 py-3 muted" colspan="4">ยังไม่มีข้อมูล</td></tr>`;
+    todayMeta.textContent = '';
   });
-  return await res.json();
+
+  // settings inputs
+  $('apiUrlInput').value = apiUrl || '';
+  $('centerLat').value = String(geoCfg.centerLat ?? defaultGeo.centerLat);
+  $('centerLng').value = String(geoCfg.centerLng ?? defaultGeo.centerLng);
+  $('radiusM').value = String(geoCfg.radiusM ?? defaultGeo.radiusM);
+
+  // auto open settings if no api
+  if (!apiUrl) openModal('settings');
+
+  // load models
+  loadModels().catch(err => {
+    modelsLoaded = false;
+    stModel.textContent = 'Model: โหลดไม่สำเร็จ';
+    stModel.style.borderColor = 'rgba(239,68,68,.6)';
+    faceResult.innerHTML = `<div class="text-sm" style="color:var(--bad)">โหลดโมเดลไม่สำเร็จ: ${escapeHtml(err.message || String(err))}</div>`;
+  });
+
+  // overlay loop (draw box)
+  requestAnimationFrame(drawLoop);
 }
 
-/** =========================================================
- * Theme (dark/light)
- * ========================================================= */
-let isLight = false;
-function applyTheme(){
-  const body = document.body;
-  if(isLight){
-    body.className = "min-h-screen bg-slate-100 text-slate-900";
-    el("btnTheme").textContent = "โหมดกลางคืน";
-    // ปรับสีแบบง่าย: ใช้ class เดิมได้ แต่พื้นหลังหลักเปลี่ยน
-  }else{
-    body.className = "min-h-screen bg-slate-950 text-slate-100";
-    el("btnTheme").textContent = "โหมดกลางวัน";
-  }
+/** =========================
+ *  THEME
+ *  ========================= */
+function toggleTheme(){
+  const cur = document.documentElement.getAttribute('data-theme') || 'dark';
+  const next = cur === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem(LS_THEME, next);
 }
-el("btnTheme").onclick = ()=>{ isLight = !isLight; applyTheme(); };
 
-/** =========================================================
- * Settings modal
- * ========================================================= */
-el("btnSettings").onclick = ()=>{
-  el("settingsBack").classList.remove("hidden");
-  el("settingsBack").classList.add("flex");
-  el("apiInput").value = API_URL;
-};
-el("btnCloseSettings").onclick = ()=>{
-  el("settingsBack").classList.add("hidden");
-  el("settingsBack").classList.remove("flex");
-};
-el("btnSaveSettings").onclick = ()=>{
-  const v = (el("apiInput").value||"").trim();
-  if(!v || !v.includes("/exec")){
-    alert("กรุณาใส่ URL ที่ลงท้ายด้วย /exec");
+/** =========================
+ *  MODALS
+ *  ========================= */
+function openModal(which){
+  backdrop.classList.add('show');
+  if (which === 'settings') settingsModal.classList.add('show');
+  if (which === 'help') helpModal.classList.add('show');
+}
+function closeModals(){
+  backdrop.classList.remove('show');
+  settingsModal.classList.remove('show');
+  helpModal.classList.remove('show');
+}
+
+/** =========================
+ *  SETTINGS
+ *  ========================= */
+function applyDefaultSettings(showMsg){
+  $('apiUrlInput').value = apiUrl || '';
+  $('centerLat').value = String(defaultGeo.centerLat);
+  $('centerLng').value = String(defaultGeo.centerLng);
+  $('radiusM').value = String(defaultGeo.radiusM);
+  if (showMsg) $('settingsMsg').innerHTML = `<span style="color:var(--ok)">ตั้งค่าเริ่มต้นให้แล้ว</span>`;
+}
+function saveSettings(){
+  const url = ($('apiUrlInput').value || '').trim();
+  const lat = parseFloat(($('centerLat').value || '').trim());
+  const lng = parseFloat(($('centerLng').value || '').trim());
+  const radiusM = parseFloat(($('radiusM').value || '').trim());
+
+  if (!url || !url.includes('/exec')){
+    $('settingsMsg').innerHTML = `<span style="color:var(--bad)">กรุณาใส่ Web App URL ที่ลงท้ายด้วย /exec</span>`;
     return;
   }
-  API_URL = v;
-  localStorage.setItem(LS_KEY, API_URL);
-  refreshLinks();
-  el("btnCloseSettings").click();
-  setPill("บันทึก URL แล้ว", "emerald");
-  log("Saved API_URL: " + API_URL);
-};
-el("btnPing").onclick = async ()=>{
-  try{
-    showOverlay("ทดสอบ ping...");
-    const j = await fetch(API_URL + "?action=" + encodeURIComponent(API_ACTIONS.ping)).then(r=>r.json());
-    hideOverlay();
-    if(j && j.ok){
-      setPill("ping สำเร็จ", "emerald");
-      log("ping ok: " + JSON.stringify(j.result||j));
-    }else{
-      setPill("ping ไม่ผ่าน", "rose");
-      log("ping fail: " + JSON.stringify(j));
-    }
-  }catch(err){
-    hideOverlay();
-    setPill("ping error", "rose");
-    log("ping error: " + err.message);
-  }
-};
-
-/** =========================================================
- * Help modal
- * ========================================================= */
-el("btnHelp").onclick = ()=>{
-  el("helpBack").classList.remove("hidden");
-  el("helpBack").classList.add("flex");
-};
-el("btnCloseHelp").onclick = ()=>{
-  el("helpBack").classList.add("hidden");
-  el("helpBack").classList.remove("flex");
-};
-
-/** =========================================================
- * GPS + Zone
- * ========================================================= */
-let gps = null;
-let zones = []; // from initial data if exists
-let activeZone = null;
-
-function haversineMeters(lat1,lng1,lat2,lng2){
-  const R = 6371000;
-  const toRad = d => d*Math.PI/180;
-  const dLat = toRad(lat2-lat1);
-  const dLng = toRad(lng2-lng1);
-  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLng/2)**2;
-  return 2*R*Math.asin(Math.sqrt(a));
-}
-
-function updateZoneStatus(){
-  if(!gps){
-    el("gpsText").textContent = "ยังไม่ได้ดึง";
-    el("zoneText").textContent = "-";
+  if (!isFinite(lat) || !isFinite(lng) || !isFinite(radiusM)){
+    $('settingsMsg').innerHTML = `<span style="color:var(--bad)">กรุณาใส่ค่า lat/lng/รัศมี ให้ถูกต้อง</span>`;
     return;
   }
-  el("gpsText").textContent = `${gps.lat.toFixed(6)}, ${gps.lng.toFixed(6)} (±${Math.round(gps.accuracy||0)}m)`;
 
-  if(activeZone && activeZone.lat && activeZone.lng && activeZone.radius){
-    const dist = haversineMeters(gps.lat, gps.lng, Number(activeZone.lat), Number(activeZone.lng));
-    const ok = dist <= Number(activeZone.radius);
-    el("zoneText").textContent = ok
-      ? `อยู่ในพื้นที่ ✅ (${Math.round(dist)}m)`
-      : `อยู่นอกพื้นที่ ❌ (${Math.round(dist)}m)`;
-  }else{
-    el("zoneText").textContent = "ไม่มีข้อมูลโซน (จะให้ backend ตรวจแทน)";
+  apiUrl = url.replace(/\/+$/,'');
+  localStorage.setItem(LS_API, apiUrl);
+
+  geoCfg = { centerLat: lat, centerLng: lng, radiusM };
+  localStorage.setItem(LS_GEO_CFG, JSON.stringify(geoCfg));
+
+  renderApiUrl();
+  renderGeoCfg();
+  renderNavLinks();
+
+  $('settingsMsg').innerHTML = `<span style="color:var(--ok)">บันทึกแล้ว</span>`;
+  setTimeout(closeModals, 300);
+}
+
+/** =========================
+ *  RENDER
+ *  ========================= */
+function renderApiUrl(){
+  stApiUrl.textContent = apiUrl ? apiUrl : 'ยังไม่ตั้งค่า';
+  stApiUrl.className = apiUrl ? 'text-xs break-all' : 'text-xs break-all muted';
+}
+function renderGeoCfg(){
+  stCenter.textContent = `${fmt(geoCfg.centerLat)} , ${fmt(geoCfg.centerLng)}`;
+  stRadius.textContent = `${Math.round(geoCfg.radiusM)} m`;
+  stDist.textContent = '-';
+}
+function renderNavLinks(){
+  const aAdmin = $('linkAdmin');
+  const aLeave = $('linkLeave');
+  if (apiUrl){
+    aAdmin.href = `${apiUrl}?page=admin`;
+    aLeave.href = `${apiUrl}?page=leave`;
+    aAdmin.target = '_blank';
+    aLeave.target = '_blank';
+  } else {
+    aAdmin.href = '#';
+    aLeave.href = '#';
   }
 }
 
-async function getGPS(){
-  return new Promise((resolve,reject)=>{
-    if(!navigator.geolocation) return reject(new Error("เบราว์เซอร์ไม่รองรับ GPS"));
-    navigator.geolocation.getCurrentPosition(
-      pos=>{
-        resolve({
-          lat: pos.coords.latitude,
-          lng: pos.coords.longitude,
-          accuracy: pos.coords.accuracy
-        });
-      },
-      err=>reject(new Error(err.message || "ดึง GPS ไม่สำเร็จ")),
-      { enableHighAccuracy:true, timeout:15000, maximumAge:0 }
-    );
-  });
-}
-
-el("btnGPS").onclick = async ()=>{
-  try{
-    showOverlay("กำลังดึง GPS...");
-    gps = await getGPS();
-    hideOverlay();
-    setPill("ได้ GPS แล้ว", "emerald");
-    updateZoneStatus();
-    log("GPS ok: " + JSON.stringify(gps));
-  }catch(err){
-    hideOverlay();
-    setPill("GPS error", "rose");
-    log("GPS error: " + err.message);
-    alert("ดึง GPS ไม่ได้: " + err.message);
-  }
-};
-
-/** =========================================================
- * Load initial data (zones optional)
- * ========================================================= */
-async function loadInitialData(){
-  try{
-    const j = await postJson({ action: API_ACTIONS.getInitialData });
-    if(j && j.ok){
-      const r = j.result || {};
-      zones = r.zones || r.Zones || [];
-      // เลือกโซนแรก หรือโซนที่ชื่อคล้าย "ชุมแพ"
-      activeZone = zones.find(z => String(z.name||z.zoneName||"").includes("ชุมแพ")) || zones[0] || null;
-      log("InitialData ok: zones=" + (zones?.length||0));
-      updateZoneStatus();
-    }else{
-      log("InitialData not ok: " + JSON.stringify(j));
-    }
-  }catch(err){
-    log("InitialData error: " + err.message);
-  }
-}
-
-/** =========================================================
- * Face Model + Camera
- * ========================================================= */
-const video = el("video");
-const canvas = el("canvas");
-const ctx = canvas.getContext("2d");
-let stream = null;
-let modelLoaded = false;
-let detecting = false;
-
+/** =========================
+ *  MODELS
+ *  ========================= */
 async function loadModels(){
-  const MODEL_URL = "https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model";
-  el("modelText").textContent = "กำลังโหลด...";
-  try{
-    await faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL);
-    await faceapi.nets.faceLandmark68Net.loadFromUri(MODEL_URL);
-    await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
-    modelLoaded = true;
-    el("modelText").textContent = "โหลดแล้ว ✅";
-    log("Face models loaded");
-  }catch(err){
-    el("modelText").textContent = "โหลดไม่สำเร็จ ❌";
-    log("Model load error: " + err.message);
-  }
+  stModel.textContent = 'Model: กำลังโหลด…';
+  const t0 = performance.now();
+  await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+  await faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL);
+  await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+  modelsLoaded = true;
+  const ms = Math.round(performance.now() - t0);
+  stModel.textContent = `Model: พร้อมใช้ (${ms}ms)`;
+  stModel.style.borderColor = 'rgba(34,197,94,.45)';
 }
 
+/** =========================
+ *  CAMERA
+ *  ========================= */
 async function startCamera(){
   try{
-    if(stream) return;
-    stream = await navigator.mediaDevices.getUserMedia({
-      video:{ width:{ideal:1280}, height:{ideal:720}, facingMode:"user" },
-      audio:false
+    if (!navigator.mediaDevices?.getUserMedia) throw new Error('เบราว์เซอร์ไม่รองรับกล้อง');
+    if (camStream) return;
+
+    camStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'user', width: { ideal: 1280 }, height:{ ideal: 720 } },
+      audio: false
     });
-    video.srcObject = stream;
+
+    video.srcObject = camStream;
     await video.play();
-    el("camText").textContent = "เปิดแล้ว ✅";
-    // canvas size sync
-    setTimeout(()=>{
-      canvas.width = video.videoWidth || 1280;
-      canvas.height = video.videoHeight || 720;
-    }, 200);
-    log("Camera started");
-    if(modelLoaded && !detecting) detectLoop();
+
+    stCam.textContent = 'Camera: เปิด';
+    stCam.style.borderColor = 'rgba(34,197,94,.45)';
   }catch(err){
-    el("camText").textContent = "เปิดไม่ได้ ❌";
-    log("Camera error: " + err.message);
-    alert("ไม่สามารถเข้าถึงกล้องได้: " + err.message);
+    stCam.textContent = 'Camera: เปิดไม่ได้';
+    stCam.style.borderColor = 'rgba(239,68,68,.6)';
+    faceResult.innerHTML = `<div style="color:var(--bad)">เปิดกล้องไม่สำเร็จ: ${escapeHtml(err.message || String(err))}</div>`;
   }
 }
-
 function stopCamera(){
-  if(stream){
-    stream.getTracks().forEach(t=>t.stop());
-    stream = null;
+  if (camStream){
+    camStream.getTracks().forEach(t => t.stop());
+    camStream = null;
   }
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  el("camText").textContent = "ปิดแล้ว";
-  log("Camera stopped");
+  video.srcObject = null;
+  stCam.textContent = 'Camera: ปิด';
+  stCam.style.borderColor = 'rgba(148,163,184,.25)';
 }
 
-async function detectLoop(){
-  detecting = true;
-  while(detecting){
-    if(!stream || !modelLoaded){
-      await new Promise(r=>setTimeout(r,250));
-      continue;
-    }
-    try{
-      const det = await faceapi.detectSingleFace(video).withFaceLandmarks();
-      ctx.clearRect(0,0,canvas.width,canvas.height);
-      if(det){
-        const dims = faceapi.matchDimensions(canvas, video, true);
+/** =========================
+ *  GPS
+ *  ========================= */
+function getGps(){
+  if (!navigator.geolocation){
+    stGps.textContent = 'GPS: ไม่รองรับ';
+    stGps.style.borderColor = 'rgba(239,68,68,.6)';
+    return;
+  }
+  stGps.textContent = 'GPS: กำลังดึง…';
+
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      gps = { lat: pos.coords.latitude, lng: pos.coords.longitude, acc: pos.coords.accuracy };
+      stGps.textContent = `GPS: ${fmt(gps.lat)}, ${fmt(gps.lng)} (±${Math.round(gps.acc)}m)`;
+      stGps.style.borderColor = 'rgba(34,197,94,.45)';
+
+      const d = haversineM(gps.lat, gps.lng, geoCfg.centerLat, geoCfg.centerLng);
+      stDist.textContent = `${Math.round(d)} m`;
+      const inZone = d <= geoCfg.radiusM;
+      stZone.textContent = inZone ? 'พื้นที่: ผ่าน' : 'พื้นที่: ไม่ผ่าน';
+      stZone.style.borderColor = inZone ? 'rgba(34,197,94,.45)' : 'rgba(239,68,68,.6)';
+    },
+    (err) => {
+      stGps.textContent = 'GPS: ดึงไม่ได้';
+      stGps.style.borderColor = 'rgba(239,68,68,.6)';
+      faceResult.innerHTML = `<div style="color:var(--bad)">ดึง GPS ไม่สำเร็จ: ${escapeHtml(err.message || String(err))}</div>`;
+    },
+    { enableHighAccuracy:true, timeout: 12000, maximumAge: 0 }
+  );
+}
+
+/** =========================
+ *  FACE BOX LOOP
+ *  ========================= */
+async function drawLoop(){
+  try{
+    if (modelsLoaded && camStream && video.readyState >= 2){
+      const w = overlay.width = video.videoWidth || overlay.width;
+      const h = overlay.height = video.videoHeight || overlay.height;
+      const ctx = overlay.getContext('2d');
+
+      ctx.clearRect(0,0,w,h);
+
+      const det = await faceapi.detectSingleFace(video, new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 }))
+        .withFaceLandmarks(true);
+
+      if (det){
+        const dims = faceapi.matchDimensions(overlay, { width:w, height:h });
         const resized = faceapi.resizeResults(det, dims);
-        faceapi.draw.drawDetections(canvas, [resized]);
-        faceapi.draw.drawFaceLandmarks(canvas, [resized]);
+        faceapi.draw.drawDetections(overlay, [resized]);
+        faceapi.draw.drawFaceLandmarks(overlay, [resized]);
       }
-    }catch(e){
-      // ignore loop errors
     }
-    await new Promise(r=>setTimeout(r,120));
-  }
+  }catch(_){}
+  requestAnimationFrame(drawLoop);
 }
 
-el("btnStartCam").onclick = startCamera;
-el("btnStopCam").onclick = stopCamera;
+/** =========================
+ *  JSONP (แก้ CORS บน GitHub Pages)
+ *  ========================= */
+function apiJsonp(action, payload = {}){
+  if (!apiUrl) return Promise.reject(new Error('ยังไม่ตั้งค่า API URL'));
+  const cbName = `__cb_${Date.now()}_${Math.floor(Math.random()*100000)}`;
+  const script = document.createElement('script');
 
-/** =========================================================
- * Face Check-in
- * ========================================================= */
-async function ensureReadyForScan(){
-  if(!modelLoaded){
-    alert("Model ยังโหลดไม่สำเร็จ");
-    return false;
-  }
-  if(!stream){
-    await startCamera();
-    if(!stream) return false;
-  }
-  if(!gps){
-    try{
-      gps = await getGPS();
-      updateZoneStatus();
-    }catch(e){
-      alert("ต้องอนุญาต GPS ก่อน: " + e.message);
-      return false;
-    }
-  }
-  return true;
-}
+  const packed = packPayload(payload); // base64url json
+  const url = `${apiUrl}?action=${encodeURIComponent(action)}&payload=${encodeURIComponent(packed)}&callback=${encodeURIComponent(cbName)}`;
 
-async function getDescriptor(){
-  const det = await faceapi.detectSingleFace(video).withFaceLandmarks().withFaceDescriptor();
-  if(!det) return null;
-  return Array.from(det.descriptor);
-}
+  return new Promise((resolve, reject) => {
+    let done = false;
 
-el("btnFaceCheckIn").onclick = async ()=>{
-  el("faceResult").textContent = "";
-  try{
-    const ok = await ensureReadyForScan();
-    if(!ok) return;
+    const timer = setTimeout(() => {
+      if (done) return;
+      done = true;
+      cleanup();
+      reject(new Error('Timeout'));
+    }, 20000);
 
-    showOverlay("กำลังสแกนใบหน้า...");
-    setPill("กำลังสแกน...", "amber");
+    window[cbName] = (data) => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      cleanup();
+      resolve(data);
+    };
 
-    const desc = await getDescriptor();
-    if(!desc){
-      hideOverlay();
-      setPill("ไม่พบใบหน้า", "rose");
-      el("faceResult").textContent = "❌ ไม่พบใบหน้าในกล้อง\nลองขยับหน้าให้ชัด/แสงพอดี แล้วสแกนใหม่";
-      return;
+    function cleanup(){
+      try{ delete window[cbName]; }catch(_){ window[cbName] = undefined; }
+      if (script.parentNode) script.parentNode.removeChild(script);
     }
 
-    const j = await postJson({
-      action: API_ACTIONS.faceCheckIn,
-      faceDescriptor: desc,
-      lat: gps.lat, lng: gps.lng, accuracy: gps.accuracy
-    });
+    script.onerror = () => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      cleanup();
+      reject(new Error('JSONP load error'));
+    };
 
-    hideOverlay();
-
-    if(!j || !j.ok){
-      setPill("สแกนไม่ผ่าน", "rose");
-      el("faceResult").textContent = "❌ " + (j && j.error ? j.error : JSON.stringify(j));
-      log("faceCheckIn fail: " + JSON.stringify(j));
-      return;
-    }
-
-    setPill("เข้างานสำเร็จ ✅", "emerald");
-    const r = j.result || j.data || {};
-    el("faceResult").textContent =
-      `✅ เข้างานสำเร็จ\n` +
-      `พนักงาน: ${r.fullName || r.empName || "-"} (${r.code || r.empCode || "-"})\n` +
-      `เวลา: ${r.time || r.serverTime || "-"}\n` +
-      `สถานะ: ${r.status || "-"}\n`;
-
-    log("faceCheckIn ok: " + JSON.stringify(r));
-  }catch(err){
-    hideOverlay();
-    setPill("สแกน error", "rose");
-    el("faceResult").textContent = "❌ " + err.message;
-    log("faceCheckIn error: " + err.message);
-  }
-};
-
-/** =========================================================
- * Register Face (first time)
- * ========================================================= */
-el("btnRegisterFace").onclick = async ()=>{
-  el("regResult").textContent = "";
-  const code = (el("regCode").value||"").trim();
-  if(!code){ alert("กรุณาใส่รหัสพนักงาน"); return; }
-  if(!el("consent").checked){
-    alert("ต้องติ๊ก “ยินยอมให้บันทึกใบหน้า” ก่อน");
-    return;
-  }
-
-  try{
-    const ok = await ensureReadyForScan();
-    if(!ok) return;
-
-    showOverlay("กำลังบันทึกใบหน้า...");
-    setPill("กำลังบันทึกใบหน้า...", "amber");
-
-    const desc = await getDescriptor();
-    if(!desc){
-      hideOverlay();
-      setPill("ไม่พบใบหน้า", "rose");
-      el("regResult").textContent = "❌ ไม่พบใบหน้า กรุณาลองใหม่";
-      return;
-    }
-
-    const j = await postJson({
-      action: API_ACTIONS.uploadEmployeeFace,
-      code,
-      faceDescriptor: desc
-    });
-
-    hideOverlay();
-
-    if(!j || !j.ok){
-      setPill("บันทึกไม่สำเร็จ", "rose");
-      el("regResult").textContent = "❌ " + (j && j.error ? j.error : JSON.stringify(j));
-      log("uploadEmployeeFace fail: " + JSON.stringify(j));
-      return;
-    }
-
-    setPill("บันทึกใบหน้าแล้ว ✅", "emerald");
-    el("regResult").textContent = "✅ บันทึกใบหน้าสำเร็จสำหรับ " + code;
-    log("uploadEmployeeFace ok: " + JSON.stringify(j.result||j));
-  }catch(err){
-    hideOverlay();
-    setPill("บันทึกใบหน้า error", "rose");
-    el("regResult").textContent = "❌ " + err.message;
-    log("uploadEmployeeFace error: " + err.message);
-  }
-};
-
-/** =========================================================
- * Today Check by code
- * ========================================================= */
-function rowSlot(label, value, method, status, note){
-  return `
-    <tr>
-      <td class="p-3 font-semibold">${escapeHtml(label)}</td>
-      <td class="p-3">${escapeHtml(value||"-")}</td>
-      <td class="p-3">${escapeHtml(method||"-")}</td>
-      <td class="p-3">${escapeHtml(status||"-")}</td>
-      <td class="p-3">${escapeHtml(note||"-")}</td>
-    </tr>
-  `;
-}
-
-function renderToday(result){
-  const tb = el("todayBody");
-  if(!result){
-    tb.innerHTML = `<tr><td class="p-3 text-slate-400" colspan="5">ยังไม่มีข้อมูล</td></tr>`;
-    el("todayTitle").textContent = "-";
-    el("todayMeta").textContent = "-";
-    return;
-  }
-
-  const emp = result.employee || result.emp || {};
-  const t = result.today || result.log || result || {};
-
-  el("todayTitle").textContent = `${emp.code||t.code||"-"} • ${emp.fullName||t.fullName||"-"}`;
-  el("todayMeta").textContent = `สาขา: ${emp.branch||t.branch||"-"} | ระดับ: ${emp.level||t.level||"-"} | สถานะรวม: ${t.status||"-"}`;
-
-  // รองรับหลายชื่อคีย์: t1..t4, tExtra1..tExtra2
-  const rows = [];
-  rows.push(rowSlot("T1", t.t1, t.t1Method, t.t1Status, t.t1Note));
-  rows.push(rowSlot("T2", t.t2, t.t2Method, t.t2Status, t.t2Note));
-  rows.push(rowSlot("T3", t.t3, t.t3Method, t.t3Status, t.t3Note));
-  rows.push(rowSlot("T4", t.t4, t.t4Method, t.t4Status, t.t4Note));
-
-  // Extra: ถ้ามี ให้แสดง "รอ admin ตรวจสอบ"
-  const ex1 = t.tExtra1 || t.extra1;
-  const ex2 = t.tExtra2 || t.extra2;
-  if(ex1) rows.push(rowSlot("Extra 1", ex1, t.tExtra1Method, "รอ admin ตรวจสอบ", t.tExtra1Note || t.extraNote));
-  if(ex2) rows.push(rowSlot("Extra 2", ex2, t.tExtra2Method, "รอ admin ตรวจสอบ", t.tExtra2Note || t.extraNote));
-
-  // Late summary
-  if(t.lateMinutes || t.totalLateMinutes){
-    rows.push(rowSlot("สายรวม", (t.totalLateText||`${t.totalLateMinutes||t.lateMinutes} นาที`), "-", t.lateReason||"สาย", "-"));
-  }
-
-  tb.innerHTML = rows.join("") || `<tr><td class="p-3 text-slate-400" colspan="5">ไม่พบข้อมูล</td></tr>`;
-}
-
-el("btnCheckToday").onclick = async ()=>{
-  const code = (el("chkCode").value||"").trim();
-  if(!code){ alert("กรุณาใส่รหัสพนักงาน"); return; }
-
-  try{
-    showOverlay("กำลังดึงข้อมูลวันนี้...");
-    setPill("กำลังตรวจสอบ...", "amber");
-
-    const j = await postJson({ action: API_ACTIONS.getTodayByCode, code });
-    hideOverlay();
-
-    if(!j || !j.ok){
-      setPill("ตรวจสอบไม่สำเร็จ", "rose");
-      log("getTodayByCode fail: " + JSON.stringify(j));
-      renderToday(null);
-      alert("ตรวจสอบไม่สำเร็จ: " + (j && j.error ? j.error : "unknown"));
-      return;
-    }
-
-    setPill("ดึงข้อมูลแล้ว ✅", "emerald");
-    renderToday(j.result || j.data);
-    log("getTodayByCode ok");
-  }catch(err){
-    hideOverlay();
-    setPill("ตรวจสอบ error", "rose");
-    log("getTodayByCode error: " + err.message);
-  }
-};
-
-el("btnClearToday").onclick = ()=>{
-  el("chkCode").value = "";
-  renderToday(null);
-  setPill("ล้างแล้ว", "amber");
-};
-
-/** =========================================================
- * Manual Log (fallback)
- * ========================================================= */
-el("btnManualToggle").onclick = ()=>{
-  el("manualBox").classList.toggle("hidden");
-};
-
-function fileToBase64(file){
-  return new Promise((resolve,reject)=>{
-    const fr = new FileReader();
-    fr.onload = ()=> resolve(fr.result);
-    fr.onerror = ()=> reject(new Error("อ่านไฟล์ไม่สำเร็จ"));
-    fr.readAsDataURL(file);
+    script.src = url;
+    document.body.appendChild(script);
   });
 }
 
-el("btnManualSave").onclick = async ()=>{
-  el("manualResult").textContent = "";
-  const code = (el("m_code").value||"").trim();
-  const note = (el("m_note").value||"").trim();
-  if(!code){ alert("กรุณาใส่รหัสพนักงาน"); return; }
+function packPayload(obj){
+  const json = JSON.stringify(obj || {});
+  // utf8 -> base64url
+  const bytes = new TextEncoder().encode(json);
+  let bin = '';
+  bytes.forEach(b => bin += String.fromCharCode(b));
+  const b64 = btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  return b64;
+}
 
+/** =========================
+ *  PING / SYNC EMP
+ *  ========================= */
+async function onPing(){
+  stPing.textContent = 'กำลังทดสอบ…';
   try{
-    if(!gps){
-      showOverlay("กำลังดึง GPS...");
-      gps = await getGPS();
-      updateZoneStatus();
-    }
+    const res = await apiJsonp('ping', { t: Date.now() });
+    stPing.textContent = res?.ok ? 'pong ✅' : ('ไม่ผ่าน');
+  }catch(err){
+    stPing.textContent = `ไม่ผ่าน (${err.message || err})`;
+  }
+}
 
-    showOverlay("กำลังบันทึกด้วยมือ...");
-    setPill("กำลังบันทึก...", "amber");
+async function onSyncEmployees(){
+  faceResult.innerHTML = `<div class="muted">กำลังซิงค์พนักงาน…</div>`;
+  try{
+    const res = await apiJsonp('getEmployeesForFace', { t: Date.now() });
+    if (!res?.ok) throw new Error(res?.error || 'sync failed');
 
-    const f = el("m_file").files && el("m_file").files[0];
-    let evidenceBase64 = "", evidenceName="", evidenceMime="";
-    if(f){
-      const dataUrl = await fileToBase64(f);
-      evidenceBase64 = dataUrl; // backend ควรแยก base64 เองถ้าต้องการ
-      evidenceName = f.name;
-      evidenceMime = f.type || "image/jpeg";
-    }
+    const employees = Array.isArray(res.data) ? res.data : [];
+    empCache = {
+      updatedAt: new Date().toISOString(),
+      employees
+    };
+    localStorage.setItem(LS_EMP_CACHE, JSON.stringify(empCache));
 
-    const j = await postJson({
-      action: API_ACTIONS.saveManualLog,
-      code, note,
-      lat: gps.lat, lng: gps.lng, accuracy: gps.accuracy,
-      evidenceBase64, evidenceName, evidenceMime
-    });
+    faceResult.innerHTML = `<div style="color:var(--ok)">ซิงค์สำเร็จ: ${employees.length} คน</div>`;
+  }catch(err){
+    faceResult.innerHTML = `<div style="color:var(--bad)">ซิงค์ไม่สำเร็จ: ${escapeHtml(err.message || String(err))}</div>`;
+  }
+}
 
-    hideOverlay();
+/** =========================
+ *  SCAN FACE (จับคู่ในเครื่อง แล้วค่อยยิงบันทึกด้วย code)
+ *  ========================= */
+async function onScanFace(){
+  faceResult.innerHTML = '';
+  try{
+    if (!modelsLoaded) throw new Error('Model ยังไม่พร้อม');
+    if (!camStream) throw new Error('กรุณากด “เปิดกล้อง” ก่อน');
+    if (!gps) throw new Error('กรุณากด “ดึง GPS” ก่อน');
 
-    if(!j || !j.ok){
-      setPill("บันทึกไม่สำเร็จ", "rose");
-      el("manualResult").textContent = "❌ " + (j && j.error ? j.error : JSON.stringify(j));
-      log("saveManualLog fail: " + JSON.stringify(j));
+    const d = haversineM(gps.lat, gps.lng, geoCfg.centerLat, geoCfg.centerLng);
+    const inZone = d <= geoCfg.radiusM;
+    if (!inZone) throw new Error(`อยู่นอกพื้นที่อนุญาต (ห่าง ~${Math.round(d)}m)`);
+
+    const empList = (empCache?.employees || []);
+    if (empList.length === 0) throw new Error('ยังไม่ได้ซิงค์พนักงาน (กด “ซิงค์พนักงาน”)');
+
+    faceResult.innerHTML = `<div class="muted">กำลังสแกน…</div>`;
+
+    const det = await faceapi.detectSingleFace(
+      video,
+      new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 })
+    ).withFaceLandmarks(true).withFaceDescriptor();
+
+    if (!det) throw new Error('ไม่พบใบหน้าในกล้อง (ลองขยับหน้า/แสงให้ชัด)');
+
+    const desc = Array.from(det.descriptor); // float[128]
+    // match
+    const match = findBestMatch(desc, empList);
+    if (!match || match.distance > FACE_THRESHOLD){
+      faceResult.innerHTML = `<div style="color:var(--bad)">ไม่พบใบหน้าในระบบ (best=${match ? match.distance.toFixed(3) : '-'})</div>`;
       return;
     }
 
-    setPill("บันทึกแล้ว ✅", "emerald");
-    el("manualResult").textContent = "✅ บันทึกด้วยมือสำเร็จ";
-    log("saveManualLog ok: " + JSON.stringify(j.result||j));
-  }catch(err){
-    hideOverlay();
-    setPill("manual error", "rose");
-    el("manualResult").textContent = "❌ " + err.message;
-    log("saveManualLog error: " + err.message);
-  }
-};
+    faceResult.innerHTML = `
+      <div style="color:var(--ok)" class="font-semibold">
+        จับคู่ได้: ${escapeHtml(match.emp.fullName || match.emp.code)} (dist=${match.distance.toFixed(3)})
+      </div>
+      <div class="muted text-xs mt-1">กำลังบันทึกเวลา…</div>
+    `;
 
-/** =========================================================
- * Boot
- * ========================================================= */
-(async function init(){
-  try{
-    setPill("กำลังโหลดโมเดล + เตรียมข้อมูล...", "amber");
-    await loadModels();
-    await loadInitialData();
-    setPill("พร้อมใช้งาน (กดดึง GPS + เปิดกล้อง)", "emerald");
+    // ยิงบันทึก (JSONP)
+    const saveRes = await apiJsonp('saveCheckIn', {
+      code: match.emp.code,
+      method: 'FACE',
+      lat: gps.lat, lng: gps.lng,
+      distance: match.distance,
+      note: `FACE_MATCH:${match.distance.toFixed(3)}`
+    });
+
+    if (!saveRes?.ok) throw new Error(saveRes?.error || 'บันทึกไม่สำเร็จ');
+
+    faceResult.innerHTML = `
+      <div style="color:var(--ok)" class="font-bold">
+        ✅ บันทึกสำเร็จ!
+      </div>
+      <div class="text-sm mt-1">
+        พนักงาน: <b>${escapeHtml(saveRes.data?.fullName || match.emp.fullName || match.emp.code)}</b><br/>
+        เวลา: <b>${escapeHtml(saveRes.data?.time || '-') }</b> | ช่อง: <b>${escapeHtml(saveRes.data?.slot || '-') }</b>
+      </div>
+    `;
+
   }catch(err){
-    setPill("เริ่มระบบไม่สำเร็จ", "rose");
-    log("init error: " + err.message);
+    faceResult.innerHTML = `<div style="color:var(--bad)">❌ ${escapeHtml(err.message || String(err))}</div>`;
   }
-})();
+}
+
+function findBestMatch(desc, empList){
+  let best = null;
+  for (const emp of empList){
+    if (!emp.faceDataB64) continue; // บีบอัดไว้
+    const stored = decodeFaceB64(emp.faceDataB64);
+    if (!stored || stored.length !== 128) continue;
+    const dist = euclidean(desc, stored);
+    if (!best || dist < best.distance) best = { emp, distance: dist };
+  }
+  return best;
+}
+
+function euclidean(a,b){
+  let sum = 0;
+  for (let i=0;i<128;i++){
+    const d = (a[i]-b[i]);
+    sum += d*d;
+  }
+  return Math.sqrt(sum);
+}
+
+/** =========================
+ *  FACE COMPRESS (ลดขนาดเพื่อยิงผ่าน URL ได้)
+ *  - แปลง float[-1..1] -> int16 แล้ว base64
+ *  ========================= */
+function encodeFaceToB64(desc){
+  const buf = new ArrayBuffer(128 * 2);
+  const view = new DataView(buf);
+  for (let i=0;i<128;i++){
+    let v = desc[i];
+    if (!isFinite(v)) v = 0;
+    if (v > 1) v = 1;
+    if (v < -1) v = -1;
+    const n = Math.round(v * 32767);
+    view.setInt16(i*2, n, true);
+  }
+  const bytes = new Uint8Array(buf);
+  let bin = '';
+  bytes.forEach(b => bin += String.fromCharCode(b));
+  return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+function decodeFaceB64(b64url){
+  try{
+    const b64 = b64url.replace(/-/g,'+').replace(/_/g,'/');
+    const pad = b64.length % 4 ? '='.repeat(4 - (b64.length % 4)) : '';
+    const bin = atob(b64 + pad);
+    const bytes = new Uint8Array(bin.length);
+    for (let i=0;i<bin.length;i++) bytes[i] = bin.charCodeAt(i);
+    const view = new DataView(bytes.buffer);
+    const arr = new Array(128);
+    for (let i=0;i<128;i++){
+      arr[i] = view.getInt16(i*2, true) / 32767;
+    }
+    return arr;
+  }catch(_){
+    return null;
+  }
+}
+
+/** =========================
+ *  ADMIN UNLOCK (โหมดบันทึกใบหน้า)
+ *  ========================= */
+async function onAdminUnlock(){
+  try{
+    if (!apiUrl) throw new Error('ยังไม่ตั้งค่า API URL');
+    const pass = prompt('ใส่รหัสแอดมินเพื่อปลดล็อก (ไม่บันทึกลงเครื่อง):');
+    if (pass === null) return;
+
+    faceResult.innerHTML = `<div class="muted">กำลังปลดล็อก…</div>`;
+    const res = await apiJsonp('adminUnlock', { password: pass, t: Date.now() });
+    if (!res?.ok) throw new Error(res?.error || 'ปลดล็อกไม่สำเร็จ');
+
+    adminUnlocked = true;
+    adminSession = res.data?.session || null;
+
+    faceResult.innerHTML = `<div style="color:var(--ok)">ปลดล็อกแอดมินแล้ว ✅</div>`;
+  }catch(err){
+    faceResult.innerHTML = `<div style="color:var(--bad)">ปลดล็อกไม่สำเร็จ: ${escapeHtml(err.message || String(err))}</div>`;
+  }
+}
+
+/** =========================
+ *  ENROLL FACE
+ *  ========================= */
+async function onEnrollFace(){
+  enrollResult.innerHTML = '';
+  try{
+    if (!adminUnlocked) throw new Error('ต้องปลดล็อกแอดมินก่อน');
+    if (!modelsLoaded) throw new Error('Model ยังไม่พร้อม');
+    if (!camStream) throw new Error('กรุณาเปิดกล้องก่อน');
+
+    const code = ($('enrollCode').value || '').trim();
+    if (!code) throw new Error('กรุณาใส่รหัสพนักงาน');
+
+    enrollResult.innerHTML = `<div class="muted">กำลังจับใบหน้า…</div>`;
+
+    const det = await faceapi.detectSingleFace(
+      video,
+      new faceapi.TinyFaceDetectorOptions({ inputSize: 320, scoreThreshold: 0.5 })
+    ).withFaceLandmarks(true).withFaceDescriptor();
+
+    if (!det) throw new Error('ไม่พบใบหน้าในกล้อง');
+
+    const desc = Array.from(det.descriptor);
+    const faceDataB64 = encodeFaceToB64(desc);
+
+    enrollResult.innerHTML = `<div class="muted">กำลังบันทึกใบหน้า…</div>`;
+
+    const res = await apiJsonp('saveEmployeeFace', {
+      session: adminSession,
+      code,
+      faceDataB64,
+      t: Date.now()
+    });
+
+    if (!res?.ok) throw new Error(res?.error || 'บันทึกไม่สำเร็จ');
+
+    enrollResult.innerHTML = `<div style="color:var(--ok)">✅ บันทึกใบหน้าสำเร็จ (${escapeHtml(code)})</div>`;
+
+    // update cache in memory (ถ้ามี)
+    try{
+      const idx = (empCache.employees || []).findIndex(e => e.code === code);
+      if (idx >= 0) empCache.employees[idx].faceDataB64 = faceDataB64;
+      localStorage.setItem(LS_EMP_CACHE, JSON.stringify(empCache));
+    }catch(_){}
+  }catch(err){
+    enrollResult.innerHTML = `<div style="color:var(--bad)">❌ ${escapeHtml(err.message || String(err))}</div>`;
+  }
+}
+
+async function onCheckEnroll(){
+  enrollResult.innerHTML = '';
+  try{
+    const code = ($('enrollCode').value || '').trim();
+    if (!code) throw new Error('กรุณาใส่รหัสพนักงาน');
+    const empList = (empCache?.employees || []);
+    const emp = empList.find(e => e.code === code);
+    const has = !!(emp && emp.faceDataB64);
+    enrollResult.innerHTML = has
+      ? `<div style="color:var(--ok)">มีข้อมูลใบหน้าแล้ว ✅</div>`
+      : `<div style="color:var(--warn)">ยังไม่มีข้อมูลใบหน้า (ให้แอดมินบันทึก)</div>`;
+  }catch(err){
+    enrollResult.innerHTML = `<div style="color:var(--bad)">${escapeHtml(err.message || String(err))}</div>`;
+  }
+}
+
+/** =========================
+ *  MANUAL LOG
+ *  ========================= */
+async function onManualLog(){
+  manualResult.innerHTML = '';
+  try{
+    const code = ($('mlCode').value || '').trim();
+    const note = ($('mlNote').value || '').trim();
+    if (!code) throw new Error('กรุณาใส่รหัสพนักงาน');
+
+    if (!gps) throw new Error('กรุณากด “ดึง GPS” ก่อน');
+    const d = haversineM(gps.lat, gps.lng, geoCfg.centerLat, geoCfg.centerLng);
+    if (d > geoCfg.radiusM) throw new Error(`อยู่นอกพื้นที่อนุญาต (ห่าง ~${Math.round(d)}m)`);
+
+    manualResult.innerHTML = `<div class="muted">กำลังบันทึก…</div>`;
+
+    const res = await apiJsonp('saveManualLog', {
+      code,
+      note,
+      lat: gps.lat, lng: gps.lng,
+      t: Date.now()
+    });
+
+    if (!res?.ok) throw new Error(res?.error || 'บันทึกไม่สำเร็จ');
+
+    manualResult.innerHTML = `
+      <div style="color:var(--ok)" class="font-bold">✅ บันทึกสำเร็จ</div>
+      <div class="text-sm mt-1">เวลา: <b>${escapeHtml(res.data?.time || '-')}</b> | ช่อง: <b>${escapeHtml(res.data?.slot || '-')}</b></div>
+    `;
+  }catch(err){
+    manualResult.innerHTML = `<div style="color:var(--bad)">❌ ${escapeHtml(err.message || String(err))}</div>`;
+  }
+}
+
+/** =========================
+ *  CHECK TODAY
+ *  ========================= */
+async function onCheckToday(){
+  todayMeta.textContent = '';
+  try{
+    const code = ($('chkCode').value || '').trim();
+    if (!code) throw new Error('กรุณาใส่รหัสพนักงาน');
+
+    todayRows.innerHTML = `<tr><td class="px-3 py-3 muted" colspan="4">กำลังโหลด…</td></tr>`;
+
+    const res = await apiJsonp('getTodayByCode', { code, t: Date.now() });
+    if (!res?.ok) throw new Error(res?.error || 'โหลดไม่สำเร็จ');
+
+    const r = res.data || {};
+    const rows = [
+      { slot:'T1', time:r.t1 || '', method:r.m1 || '', status: r.s1 || '' },
+      { slot:'T2', time:r.t2 || '', method:r.m2 || '', status: r.s2 || '' },
+      { slot:'T3', time:r.t3 || '', method:r.m3 || '', status: r.s3 || '' },
+      { slot:'T4', time:r.t4 || '', method:r.m4 || '', status: r.s4 || '' },
+      { slot:'Extra1', time:r.tExtra1 || '', method:r.mExtra1 || '', status: r.extraStatus1 || (r.tExtra1 ? 'รอ admin ตรวจสอบ' : '') },
+      { slot:'Extra2', time:r.tExtra2 || '', method:r.mExtra2 || '', status: r.extraStatus2 || (r.tExtra2 ? 'รอ admin ตรวจสอบ' : '') },
+    ];
+
+    todayRows.innerHTML = rows.map(x => {
+      const has = !!x.time;
+      const c = has ? 'color:var(--ok)' : 'color:var(--muted)';
+      return `
+        <tr style="border-top:1px solid var(--line)">
+          <td class="px-3 py-2 font-semibold">${x.slot}</td>
+          <td class="px-3 py-2" style="${c}">${escapeHtml(x.time || '-')}</td>
+          <td class="px-3 py-2 muted">${escapeHtml(x.method || '-')}</td>
+          <td class="px-3 py-2">${renderStatus(x.status)}</td>
+        </tr>
+      `;
+    }).join('');
+
+    todayMeta.textContent = `ชื่อ: ${r.fullName || '-'} | สถานะรวม: ${r.status || '-'}`;
+
+  }catch(err){
+    todayRows.innerHTML = `<tr><td class="px-3 py-3" colspan="4" style="color:var(--bad)">❌ ${escapeHtml(err.message || String(err))}</td></tr>`;
+  }
+}
+
+function renderStatus(s){
+  const val = (s || '').trim();
+  if (!val) return `<span class="muted">-</span>`;
+  const low = val.toLowerCase();
+  let color = 'var(--muted)';
+  if (low.includes('ผ่าน') || low.includes('ปกติ') || low.includes('สำเร็จ')) color = 'var(--ok)';
+  if (low.includes('รอ') || low.includes('รอ admin')) color = 'var(--warn)';
+  if (low.includes('ไม่ผ่าน') || low.includes('ขาด') || low.includes('สาย')) color = 'var(--bad)';
+  return `<span style="color:${color}; font-weight:700">${escapeHtml(val)}</span>`;
+}
+
+/** =========================
+ *  CACHE
+ *  ========================= */
+function loadEmpCache(){
+  try{
+    const raw = localStorage.getItem(LS_EMP_CACHE);
+    if (!raw) return { updatedAt:null, employees:[] };
+    const obj = JSON.parse(raw);
+    if (!obj || !Array.isArray(obj.employees)) return { updatedAt:null, employees:[] };
+    return obj;
+  }catch(_){
+    return { updatedAt:null, employees:[] };
+  }
+}
+function loadGeoCfg(){
+  try{
+    const raw = localStorage.getItem(LS_GEO_CFG);
+    if (!raw) return {...defaultGeo};
+    const obj = JSON.parse(raw);
+    return {
+      centerLat: isFinite(obj.centerLat) ? obj.centerLat : defaultGeo.centerLat,
+      centerLng: isFinite(obj.centerLng) ? obj.centerLng : defaultGeo.centerLng,
+      radiusM: isFinite(obj.radiusM) ? obj.radiusM : defaultGeo.radiusM,
+    };
+  }catch(_){
+    return {...defaultGeo};
+  }
+}
+
+/** =========================
+ *  UTIL
+ *  ========================= */
+function fmt(n){ return (typeof n === 'number' && isFinite(n)) ? n.toFixed(6) : String(n); }
+
+function haversineM(lat1,lng1,lat2,lng2){
+  const R = 6371000;
+  const toRad = (d) => d*Math.PI/180;
+  const dLat = toRad(lat2-lat1);
+  const dLng = toRad(lng2-lng1);
+  const a =
+    Math.sin(dLat/2)*Math.sin(dLat/2) +
+    Math.cos(toRad(lat1))*Math.cos(toRad(lat2)) *
+    Math.sin(dLng/2)*Math.sin(dLng/2);
+  return 2*R*Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+function escapeHtml(s){
+  return String(s)
+    .replaceAll('&','&amp;')
+    .replaceAll('<','&lt;')
+    .replaceAll('>','&gt;')
+    .replaceAll('"','&quot;')
+    .replaceAll("'","&#039;");
+}
 </script>
 </body>
 </html>
