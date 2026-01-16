@@ -9,9 +9,6 @@
   <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1/dist/face-api.min.js"></script>
 
   <style>
-    /* =========================
-      THEME (Day/Night)
-    ========================== */
     :root{
       --bg:#0b1220;
       --card:#111a2b;
@@ -20,9 +17,9 @@
       --muted:#93a4c7;
       --line:rgba(148,163,184,.18);
 
-      --primary:#10b981; /* green */
+      --primary:#10b981;
       --primary2:#059669;
-      --accent:#f97316;  /* orange */
+      --accent:#f97316;
       --accent2:#ea580c;
 
       --danger:#fb7185;
@@ -36,7 +33,6 @@
       --btnText:#ffffff;
     }
 
-    /* Day theme (orange/white) */
     [data-theme="day"]{
       --bg:#fff7ed;
       --card:#ffffff;
@@ -45,9 +41,9 @@
       --muted:#64748b;
       --line:rgba(15,23,42,.12);
 
-      --primary:#f97316;  /* orange primary in day */
+      --primary:#f97316;
       --primary2:#ea580c;
-      --accent:#0ea5e9;   /* small accent */
+      --accent:#0ea5e9;
       --accent2:#0284c7;
 
       --shadow: 0 18px 45px rgba(2,6,23,.10);
@@ -63,7 +59,6 @@
                   var(--bg);
       color:var(--text);
     }
-
     a{ color:inherit; text-decoration:none; }
 
     .wrap{ max-width:1200px; margin:0 auto; padding:18px; }
@@ -72,22 +67,12 @@
       align-items:center; justify-content:space-between;
       margin-bottom:14px;
     }
-    .brand{
-      display:flex; flex-direction:column; gap:2px;
-    }
-    .brand h1{
-      margin:0;
-      font-size:18px;
-      letter-spacing:.2px;
-    }
-    .brand .sub{
-      font-size:12px;
-      color:var(--muted);
-    }
+    .brand{ display:flex; flex-direction:column; gap:2px; }
+    .brand h1{ margin:0; font-size:18px; letter-spacing:.2px; }
+    .brand .sub{ font-size:12px; color:var(--muted); }
 
-    .nav{
-      display:flex; gap:8px; flex-wrap:wrap; align-items:center;
-    }
+    .nav{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+
     .pill{
       display:inline-flex; align-items:center; gap:8px;
       padding:8px 10px;
@@ -116,7 +101,6 @@
       user-select:none;
     }
     [data-theme="day"] .btn{ background: rgba(2,6,23,.03); }
-
     .btn:hover{ transform: translateY(-1px); }
     .btn.primary{
       background: linear-gradient(180deg, var(--primary), var(--primary2));
@@ -128,12 +112,6 @@
       border-color: transparent;
       color:var(--btnText);
     }
-    .btn.danger{
-      background: linear-gradient(180deg, #fb7185, #e11d48);
-      border-color: transparent;
-      color:#fff;
-    }
-    .btn.ghost{ background: transparent; }
 
     .grid{
       display:grid;
@@ -162,27 +140,20 @@
       background: linear-gradient(180deg, rgba(249,115,22,.08), transparent);
     }
 
-    .title{
-      font-size:14px;
-      font-weight:900;
-      margin:0;
-    }
-    .desc{
-      margin-top:4px;
-      font-size:12px;
-      color:var(--muted);
-      line-height:1.4;
-    }
+    .title{ font-size:14px; font-weight:900; margin:0; }
+    .desc{ margin-top:4px; font-size:12px; color:var(--muted); line-height:1.4; }
     .body{ padding:14px; }
 
     .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+
+    /* ✅ FIX INPUT: normal size, not "pill", no fake label text inside */
     .field{
       width:100%;
       display:flex;
-      gap:8px;
       align-items:center;
-      padding:10px 12px;
-      border-radius: 999px;
+      padding:0 12px;
+      height:42px;
+      border-radius:12px;
       border:1px solid var(--line);
       background: rgba(255,255,255,.04);
     }
@@ -190,13 +161,15 @@
     .field input{
       border:none; outline:none;
       width:100%;
+      height:100%;
       background:transparent;
       color:var(--text);
-      font-size:13px;
+      font-size:14px;
     }
+    .field input::placeholder{ color:var(--muted); opacity:.9; }
+
     .hint{ font-size:12px; color:var(--muted); margin-top:8px; line-height:1.5; }
 
-    /* Camera box */
     .camBox{
       width:100%;
       aspect-ratio: 16/9;
@@ -222,7 +195,6 @@
     }
     [data-theme="day"] .badge{ background: rgba(2,6,23,.03); }
 
-    /* Table */
     .tableWrap{
       border:1px solid var(--line);
       border-radius: var(--radius2);
@@ -244,7 +216,6 @@
     }
     tbody tr:last-child td{ border-bottom:none; }
 
-    /* Modal center */
     .backdrop{
       position:fixed; inset:0;
       background: rgba(0,0,0,.55);
@@ -270,9 +241,7 @@
       border-bottom:1px solid var(--line);
     }
     .modal .mbody{ padding:14px; }
-    .muted{ color:var(--muted); }
 
-    /* Loader */
     .overlay{
       position:fixed; inset:0;
       display:none;
@@ -299,21 +268,14 @@
       50%{ transform:scale(1.55); opacity:1; }
     }
 
-    .mini{
-      font-size:12px;
-      color:var(--muted);
-      line-height:1.55;
-    }
-
+    .mini{ font-size:12px; color:var(--muted); line-height:1.55; }
     .divider{ height:1px; background: var(--line); margin:12px 0; }
-
     .kpiRow{ display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
   </style>
 </head>
 
 <body data-theme="night">
   <div class="wrap">
-    <!-- TOP -->
     <div class="topbar">
       <div class="brand">
         <h1>HRM Check-in</h1>
@@ -329,7 +291,6 @@
       </div>
     </div>
 
-    <!-- STATUS -->
     <div class="kpiRow" style="margin-bottom:12px;">
       <span class="pill" id="pillStatus"><span class="dot" id="dotStatus"></span><span id="txtStatus">กำลังเตรียมระบบ...</span></span>
       <span class="pill">API: <a id="apiLink" href="#" target="_blank" rel="noopener" style="font-weight:800; color:var(--text)">-</a></span>
@@ -337,12 +298,12 @@
     </div>
 
     <div class="grid">
-      <!-- LEFT: FACE SCAN -->
+      <!-- LEFT -->
       <div class="card">
         <div class="hd">
           <div>
             <div class="title">สแกนใบหน้าเข้าใช้งาน</div>
-            <div class="desc">แนะนำ: กด “ดึง GPS” ก่อน → เปิดกล้อง → สแกน</div>
+            <div class="desc">แนะนำ: กด “ดึง GPS” ก่อน → เปิดกล้อง → ซิงค์ใบหน้า → สแกน</div>
           </div>
           <div class="row">
             <button id="btnOpenCam" class="btn primary">เปิดกล้อง</button>
@@ -367,41 +328,36 @@
 
           <div class="row">
             <button id="btnLoadFaceDb" class="btn">ซิงค์ใบหน้าพนักงาน</button>
-            <button id="btnScan" class="btn primary" style="flex:1;">สแกนใบหน้าเข้าทำงาน</button>
+            <button id="btnScan" class="btn primary" style="flex:1;">สแกนใบหน้า (บันทึกเวลา)</button>
           </div>
 
           <div class="hint" id="scanHint">* ถ้าเปิดกล้องไม่ติด: กด “เปิดกล้อง” ใหม่ แล้วอนุญาต Permission ที่เบราว์เซอร์</div>
 
           <div class="divider"></div>
 
-          <!-- Manual log (fallback) -->
           <div style="display:flex; flex-direction:column; gap:10px;">
             <div class="title">บันทึกด้วยมือ (สำรอง)</div>
-            <div class="mini">ใช้กรณีสแกนไม่ติด/มือถือไม่รองรับ (ระบบยังตรวจ GPS ได้)</div>
+            <div class="mini">ใช้กรณีสแกนไม่ติด/มือถือไม่รองรับ (ยังตรวจ GPS ได้)</div>
 
             <div class="row">
               <div class="field" style="flex:1;">
-                <span class="muted">รหัสพนักงาน</span>
-                <input id="manCode" placeholder="เช่น EMP001" />
+                <input id="manCode" placeholder="รหัสพนักงาน (เช่น EMP001)" aria-label="รหัสพนักงาน" />
               </div>
               <div class="field" style="flex:1;">
-                <span class="muted">หมายเหตุ</span>
-                <input id="manNote" placeholder="(ถ้ามี)" />
+                <input id="manNote" placeholder="หมายเหตุ (ถ้ามี)" aria-label="หมายเหตุ" />
               </div>
             </div>
 
             <button id="btnManual" class="btn orange" style="width:220px;">บันทึกด้วยมือ</button>
-            <div class="mini muted">* ถ้ามี Extra: ระบบจะแสดง “รอ admin ตรวจสอบ” ในช่องตรวจสอบด้านขวา</div>
           </div>
 
           <div class="divider"></div>
 
-          <!-- Face enroll (admin locked) -->
           <div>
             <div class="row" style="justify-content:space-between;">
               <div>
                 <div class="title">บันทึกใบหน้า (ต้องปลดล็อกแอดมิน)</div>
-                <div class="mini muted">ล็อกไว้เพื่อกันกดเล่น — ต้องใส่รหัสก่อนถึงจะใช้งานได้</div>
+                <div class="mini">จะบันทึก 2 อย่าง: faceData ลงชีต + รูปพนักงานขึ้น Drive</div>
               </div>
               <button id="btnUnlock" class="btn">ปลดล็อก</button>
             </div>
@@ -409,13 +365,12 @@
             <div style="margin-top:10px;" id="enrollBox">
               <div class="row">
                 <div class="field" style="flex:1;">
-                  <span class="muted">รหัสพนักงาน</span>
-                  <input id="enrollCode" placeholder="EMP001" disabled />
+                  <input id="enrollCode" placeholder="รหัสพนักงานสำหรับบันทึกใบหน้า (เช่น EMP001)" aria-label="รหัสพนักงานบันทึกใบหน้า" disabled />
                 </div>
                 <button id="btnEnroll" class="btn primary" disabled style="width:220px;">บันทึกใบหน้า</button>
               </div>
-              <div class="mini muted" style="margin-top:8px;">
-                * เปิดกล้องแล้วหันหน้าให้ชัด ระบบจะเก็บ descriptor (ต้องให้ Code.gs รองรับ endpoint บันทึกใบหน้า — เราจะไปอัปเดตในขั้นถัดไป)
+              <div class="mini" style="margin-top:8px;">
+                * ต้องเปิดกล้องก่อน แล้วกดบันทึกใบหน้า
               </div>
             </div>
           </div>
@@ -423,12 +378,12 @@
         </div>
       </div>
 
-      <!-- RIGHT: CHECK TODAY -->
+      <!-- RIGHT -->
       <div class="card">
         <div class="hd">
           <div>
             <div class="title">ตรวจสอบการสแกนวันนี้ (T1–T4 + Extra)</div>
-            <div class="desc">พนักงานกรอกรหัส → ดูเวลา/วิธี/สถานะ กันลืม</div>
+            <div class="desc">กรอกรหัส → ดูเวลา/สถานะ (พักเที่ยง = T2 + 60 นาที)</div>
           </div>
           <div class="row">
             <button id="btnClearCheck" class="btn">ล้าง</button>
@@ -438,13 +393,10 @@
         <div class="body">
           <div class="row">
             <div class="field" style="flex:1;">
-              <span class="muted">รหัสพนักงาน</span>
-              <input id="chkCode" placeholder="เช่น EMP001" />
+              <input id="chkCode" placeholder="รหัสพนักงาน (เช่น EMP001)" aria-label="รหัสพนักงานตรวจสอบ" />
             </div>
             <button id="btnCheck" class="btn primary" style="width:140px;">ตรวจสอบ</button>
           </div>
-
-          <div class="hint muted">* ถ้าพบ Extra ระบบจะโชว์เป็น “รอ admin ตรวจสอบ” (จนกว่าแอดมินจะยืนยัน)</div>
 
           <div style="margin-top:12px;" class="tableWrap">
             <table>
@@ -453,11 +405,11 @@
                   <th style="width:90px;">ช่วง</th>
                   <th>เวลา</th>
                   <th style="width:120px;">วิธี</th>
-                  <th style="width:220px;">สถานะ</th>
+                  <th style="width:260px;">สถานะ</th>
                 </tr>
               </thead>
               <tbody id="chkBody">
-                <tr><td colspan="4" class="muted" style="padding:12px;">ยังไม่มีข้อมูล</td></tr>
+                <tr><td colspan="4" style="padding:12px; color:var(--muted);">ยังไม่มีข้อมูล</td></tr>
               </tbody>
             </table>
           </div>
@@ -466,7 +418,7 @@
 
           <div class="mini">
             <b>Zone ตั้งต้น:</b> ต.แสงชัยชุมแพ (แก้พิกัดได้ในโค้ด) <br/>
-            <span class="muted">- ถ้าอยู่นอกพื้นที่: ปุ่มสแกนจะเตือน (แต่ยังให้ทดสอบได้)</span>
+            <span style="color:var(--muted);">- นอกพื้นที่: ยังให้เทสได้ แต่มีแจ้งเตือน</span>
           </div>
         </div>
       </div>
@@ -480,7 +432,7 @@
         <div class="pulse"></div>
         <div style="font-weight:900;">กำลังทำงาน...</div>
       </div>
-      <div class="mini muted" id="overlayText" style="margin-top:6px;">โปรดรอสักครู่</div>
+      <div class="mini" id="overlayText" style="margin-top:6px;">โปรดรอสักครู่</div>
     </div>
   </div>
 
@@ -492,20 +444,14 @@
         <button class="btn" id="btnCloseSettings">ปิด</button>
       </div>
       <div class="mbody">
-        <div class="mini muted">Apps Script Web App URL (ต้องลงท้ายด้วย <b>/exec</b>)</div>
+        <div class="mini">Apps Script Web App URL (ต้องลงท้ายด้วย <b>/exec</b>)</div>
         <div class="field" style="margin-top:10px;">
-          <span class="muted">URL</span>
-          <input id="apiInput" placeholder="https://script.google.com/macros/s/XXXXX/exec" />
+          <input id="apiInput" placeholder="วาง Apps Script URL ที่ลงท้าย /exec" aria-label="API URL" />
         </div>
 
         <div class="row" style="margin-top:12px;">
           <button class="btn primary" id="btnSaveSettings">บันทึก</button>
           <button class="btn" id="btnPing">ทดสอบ ping</button>
-        </div>
-
-        <div class="divider"></div>
-        <div class="mini muted">
-          * หมายเหตุ: ถ้าโฮสต์บน GitHub Pages จะเรียก Apps Script ด้วย <b>JSONP</b> เพื่อเลี่ยง CORS
         </div>
       </div>
     </div>
@@ -520,19 +466,13 @@
       </div>
       <div class="mbody">
         <ol class="mini" style="margin:0; padding-left:18px; line-height:1.7;">
-          <li>กด <b>ตั้งค่า URL</b> → ใส่ลิงก์ Apps Script ที่ลงท้าย /exec → บันทึก</li>
-          <li>กด <b>ดึง GPS</b> (เพื่อเช็คพื้นที่)</li>
-          <li>กด <b>เปิดกล้อง</b> และกดอนุญาตใช้งานกล้อง</li>
-          <li>กด <b>ซิงค์ใบหน้าพนักงาน</b> (โหลด faceData มาไว้เทียบในเครื่อง)</li>
-          <li>กด <b>สแกนใบหน้าเข้าทำงาน</b></li>
-          <li>ถ้าสแกนไม่ติด ให้ใช้ <b>บันทึกด้วยมือ</b> ได้</li>
-          <li>พนักงานตรวจสอบย้อนหลัง “วันนี้” ได้ที่การ์ดด้านขวา</li>
+          <li>กด <b>ตั้งค่า URL</b> → วางลิงก์ Apps Script ที่ลงท้าย /exec → บันทึก</li>
+          <li>กด <b>ทดสอบ ping</b> ต้องขึ้น pong</li>
+          <li>กด <b>ดึง GPS</b></li>
+          <li>กด <b>เปิดกล้อง</b></li>
+          <li>กด <b>ซิงค์ใบหน้าพนักงาน</b></li>
+          <li>กด <b>สแกนใบหน้า</b> เพื่อบันทึกเวลา (ระบบจะใส่ T1/T2/T3/T4 ตามลำดับ)</li>
         </ol>
-
-        <div class="divider"></div>
-        <div class="mini muted">
-          ถ้าเปิดกล้องไม่ขึ้น: ไปที่ Site settings ของ Chrome → Camera → Allow แล้วกดเปิดกล้องใหม่
-        </div>
       </div>
     </div>
   </div>
@@ -545,16 +485,12 @@
         <button class="btn" id="btnCloseUnlock">ปิด</button>
       </div>
       <div class="mbody">
-        <div class="mini muted">ใส่รหัสเพื่อเปิดใช้งานปุ่มบันทึกใบหน้า</div>
+        <div class="mini">ใส่รหัสเพื่อเปิดใช้งานปุ่มบันทึกใบหน้า</div>
         <div class="field" style="margin-top:10px;">
-          <span class="muted">Passcode</span>
-          <input id="unlockPass" type="password" placeholder="**********" />
+          <input id="unlockPass" type="password" placeholder="ใส่รหัสปลดล็อกแอดมิน" aria-label="รหัสปลดล็อก" />
         </div>
         <div class="row" style="margin-top:12px;">
           <button class="btn primary" id="btnDoUnlock">ยืนยัน</button>
-        </div>
-        <div class="mini muted" style="margin-top:10px;">
-          * ปลดล็อกเฉพาะเครื่องนี้ (session) ปิดแท็บแล้วล็อกใหม่
         </div>
       </div>
     </div>
@@ -566,23 +502,20 @@
 ========================= */
 const LS_KEY = "hrm_api_url_v3";
 const DEFAULT_API_URL = "https://script.google.com/macros/s/PUT_YOUR_DEPLOY_ID/exec";
-
 let API_URL = localStorage.getItem(LS_KEY) || DEFAULT_API_URL;
 
 /* Zone default (ต.แสงชัยชุมแพ) */
-const ZONE = {
-  lat: 17.414800,
-  lng: 102.787000,
-  radiusM: 5000
-};
+const ZONE = { lat: 17.414800, lng: 102.787000, radiusM: 5000 };
 
-/* Actions (ให้ตรงกับ Code.gs) */
+/* Actions (ตรง Code.gs) */
 const ACTION = {
   ping: "ping",
-  getInitialData: "getInitialData",     // ควรส่ง employees(faceData), branches, levels
-  saveManualLog: "saveManualLog",       // {code, note, lat, lng, method}
-  getTodayByCode: "getTodayByCode"      // {code}
-  // บันทึกใบหน้า: จะไปอัปเดตใน Code.gs ต่อ (เช่น uploadEmployeeFace)
+  getEmployees: "getEmployees",
+  getEmployeeByCode: "getEmployeeByCode",
+  saveManualLog: "saveManualLog",
+  getTodayByCode: "getTodayByCode",
+  saveEmployeeFace: "saveEmployeeFace",
+  uploadEmployeeFacePhoto: "uploadEmployeeFacePhoto"
 };
 
 const els = (id)=>document.getElementById(id);
@@ -603,15 +536,13 @@ function setStatus(text, type="warn"){
 function refreshLinks(){
   els("apiLink").href = API_URL;
   els("apiLink").textContent = API_URL;
-  // คุณใช้แนว ?page=... อยู่แล้ว
   els("linkAdmin").href = API_URL + "?page=admin";
   els("linkLeave").href = API_URL + "?page=leave";
 }
 refreshLinks();
 
 /* =========================
-  JSONP (แก้ CORS สำหรับ GitHub Pages)
-  ใช้: doGet ใน Code.gs + callback
+  JSONP
 ========================= */
 function jsonp(action, payload={}, timeoutMs=15000){
   return new Promise((resolve, reject)=>{
@@ -622,8 +553,6 @@ function jsonp(action, payload={}, timeoutMs=15000){
     q.set("action", action);
     q.set("callback", cb);
     q.set("_", String(Date.now()));
-
-    // payload เป็น JSON (สั้น ๆ)
     q.set("payload", JSON.stringify(payload));
 
     const url = API_URL + "?" + q.toString();
@@ -662,6 +591,36 @@ function jsonp(action, payload={}, timeoutMs=15000){
 }
 
 /* =========================
+  POST no-cors (ส่งรูป/บันทึก)
+========================= */
+async function postFormNoCors(action, data){
+  const body = new URLSearchParams();
+  body.set("action", action);
+  Object.keys(data || {}).forEach(k => body.set(k, data[k]));
+  await fetch(API_URL, {
+    method: "POST",
+    mode: "no-cors",
+    headers: { "Content-Type":"application/x-www-form-urlencoded;charset=UTF-8" },
+    body
+  });
+}
+
+/* capture jpeg from video */
+function captureJpegBase64(maxW=640, quality=0.72){
+  const w0 = els("video").videoWidth || 1280;
+  const h0 = els("video").videoHeight || 720;
+  const scale = Math.min(1, maxW / w0);
+  const w = Math.round(w0 * scale);
+  const h = Math.round(h0 * scale);
+
+  const c = document.createElement("canvas");
+  c.width = w; c.height = h;
+  const cx = c.getContext("2d");
+  cx.drawImage(els("video"), 0, 0, w, h);
+  return c.toDataURL("image/jpeg", quality);
+}
+
+/* =========================
   THEME
 ========================= */
 let theme = "night";
@@ -674,14 +633,8 @@ els("btnTheme").onclick = ()=>{
 /* =========================
   MODALS
 ========================= */
-function openModal(backId){
-  const b = els(backId);
-  b.style.display = "flex";
-}
-function closeModal(backId){
-  const b = els(backId);
-  b.style.display = "none";
-}
+function openModal(backId){ els(backId).style.display = "flex"; }
+function closeModal(backId){ els(backId).style.display = "none"; }
 
 els("btnSettings").onclick = ()=>{
   els("apiInput").value = API_URL;
@@ -695,7 +648,6 @@ els("btnCloseHow").onclick = ()=> closeModal("howBack");
 els("btnUnlock").onclick = ()=> openModal("unlockBack");
 els("btnCloseUnlock").onclick = ()=> closeModal("unlockBack");
 
-/* Save settings */
 els("btnSaveSettings").onclick = ()=>{
   const v = (els("apiInput").value||"").trim();
   if(!v || !v.includes("/exec")){
@@ -709,14 +661,13 @@ els("btnSaveSettings").onclick = ()=>{
   setStatus("บันทึก URL แล้ว", "ok");
 };
 
-/* Ping */
 els("btnPing").onclick = async ()=>{
   try{
     showOverlay("ทดสอบ ping...");
     const j = await jsonp(ACTION.ping, {});
     hideOverlay();
     if(j && j.ok){
-      setStatus("ping สำเร็จ", "ok");
+      setStatus("ping สำเร็จ (pong)", "ok");
     }else{
       setStatus("ping ไม่ผ่าน", "bad");
       alert("ping fail: " + JSON.stringify(j));
@@ -784,7 +735,7 @@ els("btnGps").onclick = async ()=>{
 ========================= */
 let stream = null;
 let modelsLoaded = false;
-let faceDb = []; // [{code, fullName, descriptor:Array<number>}]
+let faceDb = []; // [{code, fullName, descriptor:Float32Array}]
 
 const video = els("video");
 const canvas = els("overlayCanvas");
@@ -798,7 +749,6 @@ window.addEventListener("resize", resizeCanvas);
 
 async function loadModels(){
   if(modelsLoaded) return true;
-  // IMPORTANT: models folder must be accessible via GitHub pages
   const MODEL_URL = "./models";
   showOverlay("กำลังโหลดโมเดล...");
   await faceapi.nets.ssdMobilenetv1.loadFromUri(MODEL_URL);
@@ -826,8 +776,6 @@ async function openCamera(){
 
     els("camState").textContent = "เปิด";
     setStatus("กล้องพร้อม", "ok");
-
-    // start draw loop
     requestAnimationFrame(drawLoop);
   }catch(err){
     hideOverlay();
@@ -863,13 +811,11 @@ async function drawLoop(){
     const dims = faceapi.matchDimensions(canvas, video, true);
     const resized = faceapi.resizeResults(det, dims);
 
-    // draw box
     ctx.strokeStyle = "rgba(16,185,129,.95)";
     ctx.lineWidth = 3;
     const b = resized.detection.box;
     ctx.strokeRect(b.x, b.y, b.width, b.height);
 
-    // label
     ctx.fillStyle = "rgba(16,185,129,.95)";
     ctx.font = "bold 16px ui-sans-serif";
     ctx.fillText("FACE", b.x, Math.max(18, b.y - 8));
@@ -878,7 +824,7 @@ async function drawLoop(){
 }
 
 /* =========================
-  LOAD FACE DB (จาก getInitialData)
+  LOAD FACE DB (getEmployees)
 ========================= */
 function parseDescriptor(faceData){
   try{
@@ -893,18 +839,16 @@ function parseDescriptor(faceData){
 els("btnLoadFaceDb").onclick = async ()=>{
   try{
     showOverlay("ซิงค์ข้อมูลใบหน้าพนักงาน...");
-    const j = await jsonp(ACTION.getInitialData, {});
+    const j = await jsonp(ACTION.getEmployees, {});
     hideOverlay();
 
     if(!j || !j.ok){
       setStatus("ซิงค์ใบหน้าไม่สำเร็จ", "bad");
-      alert("getInitialData fail: " + JSON.stringify(j));
+      alert("getEmployees fail: " + JSON.stringify(j));
       return;
     }
 
-    const result = j.result || {};
-    const employees = result.employees || result.employee || [];
-
+    const employees = j.result || [];
     const db = [];
     for(const e of employees){
       if(!e) continue;
@@ -917,7 +861,6 @@ els("btnLoadFaceDb").onclick = async ()=>{
         });
       }
     }
-
     faceDb = db;
     setStatus(`ซิงค์ใบหน้าแล้ว (${faceDb.length} คน)`, "ok");
   }catch(err){
@@ -962,23 +905,16 @@ function findBestMatch(desc){
 }
 
 /* =========================
-  SCAN -> MATCH (client) -> SAVE LOG (JSONP)
+  SCAN -> SAVE (POST no-cors) + VERIFY JSONP
 ========================= */
 els("btnScan").onclick = async ()=>{
   try{
-    if(!gps.lat || !gps.lng){
-      alert("กรุณากด ดึง GPS ก่อน");
-      return;
-    }
-    if(!stream){
-      alert("กรุณากด เปิดกล้อง ก่อน");
-      return;
-    }
-    if(!modelsLoaded){
-      await loadModels();
-    }
+    if(!gps.lat || !gps.lng) { alert("กรุณากด ดึง GPS ก่อน"); return; }
+    if(!stream) { alert("กรุณากด เปิดกล้อง ก่อน"); return; }
+    if(!modelsLoaded) await loadModels();
+
     if(!faceDb.length){
-      const ok = confirm("ยังไม่ได้ซิงค์ใบหน้า (faceData) — ต้องซิงค์ก่อนเพื่อเทียบใบหน้า\nกด OK เพื่อซิงค์เดี๋ยวนี้");
+      const ok = confirm("ยังไม่ได้ซิงค์ใบหน้า (faceData)\nกด OK เพื่อซิงค์เดี๋ยวนี้");
       if(ok) await els("btnLoadFaceDb").onclick();
       if(!faceDb.length) return;
     }
@@ -994,7 +930,6 @@ els("btnScan").onclick = async ()=>{
       return;
     }
 
-    // threshold ปรับได้
     const TH = 0.55;
     if(best.dist > TH){
       setStatus("เทียบใบหน้าไม่ผ่าน", "bad");
@@ -1002,16 +937,24 @@ els("btnScan").onclick = async ()=>{
       return;
     }
 
-    // ส่งเข้า GS ด้วย code (เลี่ยงส่ง descriptor ยาว ๆ)
-    showOverlay("กำลังบันทึกเข้างาน...");
-    const payload = {
+    // save with evidence photo
+    const photoBase64 = captureJpegBase64(640, 0.72);
+    const evidenceName = `checkin_${best.code}_${Date.now()}.jpg`;
+
+    showOverlay("กำลังบันทึกเวลา (พร้อมรูป)...");
+    await postFormNoCors(ACTION.saveManualLog, {
       code: best.code,
-      note: `FACE client-match dist=${best.dist.toFixed(3)}`,
+      note: `FACE dist=${best.dist.toFixed(3)}`,
       method: "FACE",
-      lat: gps.lat,
-      lng: gps.lng
-    };
-    const j = await jsonp(ACTION.saveManualLog, payload);
+      lat: String(gps.lat),
+      lng: String(gps.lng),
+      evidenceBase64: photoBase64,
+      evidenceName
+    });
+
+    // verify
+    await new Promise(r=>setTimeout(r, 900));
+    const j = await jsonp(ACTION.getTodayByCode, { code: best.code });
     hideOverlay();
 
     if(!j || !j.ok){
@@ -1021,7 +964,6 @@ els("btnScan").onclick = async ()=>{
     }
 
     setStatus(`บันทึกสำเร็จ: ${best.code} ${best.fullName}`, "ok");
-
   }catch(err){
     hideOverlay();
     setStatus("สแกน error", "bad");
@@ -1030,26 +972,26 @@ els("btnScan").onclick = async ()=>{
 };
 
 /* =========================
-  MANUAL LOG
+  MANUAL LOG (POST no-cors) + VERIFY
 ========================= */
 els("btnManual").onclick = async ()=>{
   try{
     const code = (els("manCode").value||"").trim();
     const note = (els("manNote").value||"").trim();
     if(!code){ alert("กรุณาใส่รหัสพนักงาน"); return; }
-    if(!gps.lat || !gps.lng){
-      alert("กรุณากด ดึง GPS ก่อน");
-      return;
-    }
+    if(!gps.lat || !gps.lng){ alert("กรุณากด ดึง GPS ก่อน"); return; }
 
     showOverlay("กำลังบันทึกด้วยมือ...");
-    const j = await jsonp(ACTION.saveManualLog, {
+    await postFormNoCors(ACTION.saveManualLog, {
       code,
       note,
       method: "MANUAL",
-      lat: gps.lat,
-      lng: gps.lng
+      lat: String(gps.lat),
+      lng: String(gps.lng)
     });
+
+    await new Promise(r=>setTimeout(r, 900));
+    const j = await jsonp(ACTION.getTodayByCode, { code });
     hideOverlay();
 
     if(!j || !j.ok){
@@ -1070,43 +1012,39 @@ els("btnManual").onclick = async ()=>{
   CHECK TODAY
 ========================= */
 function rowHTML(slot, time, method, status){
-  const st = status || "-";
   return `<tr>
     <td><b>${slot}</b></td>
     <td>${time || "-"}</td>
     <td>${method || "-"}</td>
-    <td>${st}</td>
+    <td>${status || "-"}</td>
   </tr>`;
 }
 
 function renderToday(data){
   const tb = els("chkBody");
   if(!data){
-    tb.innerHTML = `<tr><td colspan="4" class="muted" style="padding:12px;">ไม่พบข้อมูล</td></tr>`;
+    tb.innerHTML = `<tr><td colspan="4" style="padding:12px; color:var(--muted);">ไม่พบข้อมูล</td></tr>`;
     return;
   }
 
-  // รองรับหลายรูปแบบที่ GS อาจส่งกลับ
-  // คาดว่า: {t1,t2,t3,t4,tExtra1,tExtra2,status, ...}
   const t1 = data.t1 || "";
   const t2 = data.t2 || "";
   const t3 = data.t3 || "";
   const t4 = data.t4 || "";
-  const ex1 = data.tExtra1 || data.extra1 || "";
-  const ex2 = data.tExtra2 || data.extra2 || "";
+  const ex1 = data.tExtra1 || "";
+  const ex2 = data.tExtra2 || "";
 
-  const method = data.method || data.lastMethod || "";
+  const method = data.lastMethod || data.method || "";
   const status = data.status || "";
-
-  const extraStatus = (ex1 || ex2) ? "รอ admin ตรวจสอบ" : "-";
+  const lunchDue = data.lunchDue ? ` (ควรกลับ: ${data.lunchDue})` : "";
 
   tb.innerHTML =
     rowHTML("T1", t1, method, status) +
-    rowHTML("T2", t2, method, status) +
-    rowHTML("T3", t3, method, status) +
-    rowHTML("T4", t4, method, status) +
-    rowHTML("Extra1", ex1, method, extraStatus) +
-    rowHTML("Extra2", ex2, method, extraStatus);
+    rowHTML("T2", t2, method, t2 ? ("ออกพักเที่ยง" + lunchDue) : "-") +
+    rowHTML("T3", t3, method, t3 ? status : "-") +
+    rowHTML("T4", t4, method, t4 ? status : "-") +
+    rowHTML("Extra1", ex1, method, ex1 ? "บันทึก Extra" : "-") +
+    rowHTML("Extra2", ex2, method, ex2 ? "บันทึก Extra" : "-");
 }
 
 els("btnCheck").onclick = async ()=>{
@@ -1124,7 +1062,7 @@ els("btnCheck").onclick = async ()=>{
       return;
     }
 
-    renderToday(j.result || j.data || null);
+    renderToday(j.result || null);
     setStatus("โหลดข้อมูลวันนี้แล้ว", "ok");
   }catch(err){
     hideOverlay();
@@ -1135,18 +1073,18 @@ els("btnCheck").onclick = async ()=>{
 
 els("btnClearCheck").onclick = ()=>{
   els("chkCode").value = "";
-  els("chkBody").innerHTML = `<tr><td colspan="4" class="muted" style="padding:12px;">ยังไม่มีข้อมูล</td></tr>`;
+  els("chkBody").innerHTML = `<tr><td colspan="4" style="padding:12px; color:var(--muted);">ยังไม่มีข้อมูล</td></tr>`;
 };
 
 /* =========================
-  ADMIN UNLOCK (Face enroll enable)
+  ADMIN UNLOCK + ENROLL
 ========================= */
-const PASSCODE = "0956642784";
+const PASSCODE = "0956642784"; // เปลี่ยนได้
+
 function setEnrollEnabled(on){
   els("enrollCode").disabled = !on;
   els("btnEnroll").disabled = !on;
 }
-
 setEnrollEnabled(false);
 
 els("btnDoUnlock").onclick = ()=>{
@@ -1161,29 +1099,55 @@ els("btnDoUnlock").onclick = ()=>{
   }
 };
 
-/* enroll placeholder (จะไปต่อใน Code.gs) */
 els("btnEnroll").onclick = async ()=>{
   try{
     const code = (els("enrollCode").value||"").trim();
     if(!code){ alert("กรุณาใส่รหัสพนักงาน"); return; }
     if(!stream){ alert("กรุณาเปิดกล้องก่อน"); return; }
 
-    alert("บันทึกใบหน้า: ขั้นนี้ต้องอัปเดต Code.gs ให้มี endpoint รับ descriptor และบันทึกลง Employees.faceData\nเดี๋ยวเราไปต่อที่ Code.gs ต่อได้เลย");
+    showOverlay("กำลังบันทึกใบหน้า...");
+
+    // 1) descriptor -> saveEmployeeFace (JSONP)
+    const desc = await getCurrentDescriptor();
+    const faceArr = Array.from(desc).map(n => Number(n));
+
+    const r1 = await jsonp(ACTION.saveEmployeeFace, { code, faceData: faceArr });
+    if(!r1 || !r1.ok){
+      hideOverlay();
+      setStatus("บันทึก faceData ไม่สำเร็จ", "bad");
+      alert("saveEmployeeFace fail: " + JSON.stringify(r1));
+      return;
+    }
+
+    // 2) photo -> uploadEmployeeFacePhoto (POST no-cors)
+    const photoBase64 = captureJpegBase64(640, 0.72);
+    await postFormNoCors(ACTION.uploadEmployeeFacePhoto, { code, photoBase64 });
+
+    // verify
+    await new Promise(r=>setTimeout(r, 900));
+    const r2 = await jsonp(ACTION.getEmployeeByCode, { code });
+
+    hideOverlay();
+
+    if(r2 && r2.ok){
+      setStatus("บันทึกใบหน้าเรียบร้อย ✅", "ok");
+      alert(`บันทึกใบหน้าเรียบร้อย ✅\nรหัส: ${code}\nphotoUrl: ${(r2.result && r2.result.photoUrl) ? r2.result.photoUrl : "(รอสักครู่แล้วลองซิงค์ใหม่)"}`);
+    }else{
+      setStatus("บันทึกใบหน้าแล้ว แต่ตรวจสอบไม่สำเร็จ", "warn");
+      alert("บันทึกใบหน้าแล้ว แต่เช็คกลับไม่สำเร็จ: " + JSON.stringify(r2));
+    }
   }catch(err){
-    alert(err.message);
+    hideOverlay();
+    setStatus("Enroll error", "bad");
+    alert("Enroll error: " + err.message);
   }
 };
 
 /* =========================
-  AUTO INIT
+  INIT
 ========================= */
-(async function init(){
-  try{
-    setStatus("พร้อมใช้งาน (ตั้งค่า URL แล้วกด ping ได้)", "warn");
-    // preload models only when camera opens (เพื่อไม่ช้า)
-  }catch(e){
-    setStatus("init error", "bad");
-  }
+(function init(){
+  setStatus("พร้อมใช้งาน (ตั้งค่า URL แล้วกด ping)", "warn");
 })();
 </script>
 </body>
