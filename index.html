@@ -1,0 +1,460 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>HRM Face Check-in</title>
+
+  <!-- face-api.js (library) -->
+  <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js"></script>
+
+  <style>
+    :root{
+      --bg:#0b0f14; --card:#121824; --muted:#8aa0b6; --text:#eaf2ff;
+      --line:#223044; --ok:#37d67a; --bad:#ff5c5c; --warn:#ffcc66;
+      --btn:#1b2638;
+    }
+    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:linear-gradient(180deg,#0b0f14,#0a0d12);color:var(--text);}
+    .wrap{max-width:980px;margin:0 auto;padding:18px;}
+    .top{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+    .brand{display:flex;gap:10px;align-items:center}
+    .dot{width:12px;height:12px;border-radius:999px;background:var(--ok);box-shadow:0 0 18px rgba(55,214,122,.45)}
+    .title{font-size:18px;font-weight:700}
+    .sub{font-size:12px;color:var(--muted);margin-top:2px}
+    .card{background:rgba(18,24,36,.92);border:1px solid var(--line);border-radius:16px;padding:14px}
+    .grid{display:grid;grid-template-columns:1.4fr .9fr;gap:14px}
+    @media (max-width:920px){.grid{grid-template-columns:1fr}}
+    .videoBox{position:relative;border-radius:16px;overflow:hidden;border:1px solid var(--line);background:#000}
+    video{width:100%;height:auto;display:block;transform:scaleX(-1)}
+    canvas{position:absolute;left:0;top:0;transform:scaleX(-1)}
+    .row{display:flex;gap:10px;flex-wrap:wrap}
+    .btn{
+      background:var(--btn);border:1px solid var(--line);color:var(--text);
+      padding:10px 12px;border-radius:12px;cursor:pointer;font-weight:650;
+    }
+    .btn:hover{filter:brightness(1.08)}
+    .btn.primary{background:linear-gradient(180deg,#1f3a66,#162a4a);border-color:#2c4d85}
+    .btn.good{background:linear-gradient(180deg,#1f5c3a,#153f2a);border-color:#2e8a56}
+    .btn.bad{background:linear-gradient(180deg,#6a1f1f,#471515);border-color:#a33}
+    .pill{display:inline-flex;gap:8px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:999px;color:var(--muted);font-size:12px}
+    .kv{display:grid;grid-template-columns:140px 1fr;gap:8px;margin-top:10px}
+    .kv div{font-size:13px}
+    .kv .k{color:var(--muted)}
+    input, textarea{
+      width:100%;background:#0e1420;color:var(--text);border:1px solid var(--line);
+      border-radius:12px;padding:10px 12px;outline:none;
+    }
+    textarea{min-height:78px;resize:vertical}
+    .hr{height:1px;background:var(--line);margin:12px 0}
+    .modalBack{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;padding:14px}
+    .modal{max-width:560px;width:100%;background:rgba(18,24,36,.98);border:1px solid var(--line);border-radius:16px;padding:14px}
+    .muted{color:var(--muted);font-size:12px}
+    .status{white-space:pre-wrap;font-size:13px;line-height:1.45}
+    .ok{color:var(--ok)} .badTxt{color:var(--bad)} .warnTxt{color:var(--warn)}
+    a.link{color:#9ec6ff;text-decoration:none}
+    a.link:hover{text-decoration:underline}
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div class="brand">
+        <div class="dot"></div>
+        <div>
+          <div class="title">HRM Face Check-in</div>
+          <div class="sub">หน้า index (GitHub Pages) • Face Model โหลดจาก /models • ส่ง API ไป Apps Script</div>
+        </div>
+      </div>
+
+      <div class="row">
+        <button class="btn" id="btnSettings">ตั้งค่า URL API</button>
+        <a class="btn" id="btnLeave" href="#" rel="noopener">หน้า Leave</a>
+        <a class="btn" id="btnAdmin" href="#" rel="noopener">หน้า Admin</a>
+      </div>
+    </div>
+
+    <div class="grid" style="margin-top:14px">
+      <div class="card">
+        <div class="pill" id="pillState">⏳ กำลังเตรียมระบบ...</div>
+
+        <div class="videoBox" style="margin-top:12px">
+          <video id="video" autoplay muted playsinline></video>
+          <canvas id="overlay"></canvas>
+        </div>
+
+        <div class="row" style="margin-top:12px">
+          <button class="btn primary" id="btnScan">📸 สแกนใบหน้าเข้างาน</button>
+          <button class="btn" id="btnManual">📝 บันทึกด้วยมือ (สำรอง)</button>
+          <button class="btn bad" id="btnStop">⛔ ปิดกล้อง</button>
+        </div>
+
+        <div class="hr"></div>
+        <div class="status" id="status"></div>
+      </div>
+
+      <div class="card">
+        <div style="font-weight:750;margin-bottom:6px">การเชื่อมต่อ</div>
+        <div class="muted">URL จะถูกจำไว้ในเครื่อง (localStorage) เพื่อให้เปลี่ยนง่าย</div>
+
+        <div class="kv">
+          <div class="k">API URL</div>
+          <div><span id="apiText"></span></div>
+
+          <div class="k">Models URL</div>
+          <div><span class="muted">โหลดจาก</span> <span class="ok">/models</span></div>
+
+          <div class="k">สถานะกล้อง</div>
+          <div id="camText" class="muted">ยังไม่เริ่ม</div>
+        </div>
+
+        <div class="hr"></div>
+
+        <div style="font-weight:750;margin-bottom:6px">ทิปเร็ว ๆ</div>
+        <ul class="muted" style="margin:0;padding-left:18px;line-height:1.6">
+          <li>ถ้า “ไม่ขึ้นกรอบหน้า” ให้เช็คว่าโฟลเดอร์ <b>/models</b> อยู่จริง และโหลดได้</li>
+          <li>ถ้า “GPS ไม่อนุญาต” จะส่ง API ไม่ได้ (ระบบบังคับ GPS)</li>
+          <li>Leave/Admin ต้องเป็นลิงก์ไป Web App: <code>?page=leave</code>, <code>?page=admin</code></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div class="modalBack" id="settingsBack">
+    <div class="modal">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+        <div style="font-weight:800">ตั้งค่า URL</div>
+        <button class="btn" id="btnCloseSettings">ปิด</button>
+      </div>
+      <div class="hr"></div>
+
+      <label class="muted">Apps Script Web App URL (ลงท้ายด้วย /exec)</label>
+      <input id="apiInput" placeholder="https://script.google.com/macros/s/XXXXX/exec" />
+
+      <div class="row" style="margin-top:10px">
+        <button class="btn good" id="btnSaveSettings">บันทึก</button>
+        <button class="btn" id="btnTestPing">ทดสอบ ping</button>
+      </div>
+
+      <div class="muted" style="margin-top:10px">
+        * บันทึกแล้ว ปุ่ม Leave/Admin จะใช้ URL นี้อัตโนมัติ
+      </div>
+    </div>
+  </div>
+
+  <!-- Manual Modal -->
+  <div class="modalBack" id="manualBack">
+    <div class="modal">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+        <div style="font-weight:800">บันทึกด้วยมือ (สำรอง)</div>
+        <button class="btn" id="btnCloseManual">ปิด</button>
+      </div>
+      <div class="hr"></div>
+
+      <label class="muted">รหัสพนักงาน (code)</label>
+      <input id="mCode" placeholder="เช่น EMP001" />
+
+      <div style="height:10px"></div>
+      <label class="muted">หมายเหตุ (จะถูกเก็บลง Logs.note ตามที่กำหนด)</label>
+      <textarea id="mNote" placeholder="พิมพ์เหตุผล/รายละเอียด..."></textarea>
+
+      <div style="height:10px"></div>
+      <label class="muted">แนบรูปหลักฐาน (ไม่บังคับ)</label>
+      <input id="mFile" type="file" accept="image/*" />
+
+      <div class="row" style="margin-top:10px">
+        <button class="btn good" id="btnSubmitManual">บันทึก</button>
+      </div>
+
+      <div class="muted" style="margin-top:10px">
+        * ระบบจะขอ GPS และส่ง <code>action=saveManualLog</code>
+      </div>
+    </div>
+  </div>
+
+<script>
+/** ============================
+ *  CONFIG (แก้ 2 จุดนี้)
+ *  ============================ */
+const DEFAULT_API_URL = "https://script.google.com/macros/s/PUT_YOUR_DEPLOY_ID/exec";
+const LS_KEY = "hrm_api_url_v3";
+
+/** ============================
+ *  STATE
+ *  ============================ */
+let API_URL = localStorage.getItem(LS_KEY) || DEFAULT_API_URL;
+let MODELS_URL = "./models";
+
+const el = (id)=>document.getElementById(id);
+const statusEl = el("status");
+const pill = el("pillState");
+const apiText = el("apiText");
+const camText = el("camText");
+
+const video = el("video");
+const canvas = el("overlay");
+const ctx = canvas.getContext("2d");
+
+let stream = null;
+let modelsLoaded = false;
+let detecting = false;
+
+/** ============================
+ *  UI Helpers
+ *  ============================ */
+function setPill(text, cls=""){
+  pill.className = "pill";
+  pill.textContent = text;
+  if(cls==="ok") pill.classList.add("ok");
+  if(cls==="bad") pill.classList.add("badTxt");
+  if(cls==="warn") pill.classList.add("warnTxt");
+}
+function logLine(msg, type=""){
+  const tag = type==="ok" ? "ok" : (type==="bad" ? "badTxt" : (type==="warn" ? "warnTxt" : ""));
+  statusEl.innerHTML = `<div class="${tag}">${escapeHtml(msg)}</div>` + statusEl.innerHTML;
+}
+function escapeHtml(s){
+  return String(s||"")
+    .replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;");
+}
+function refreshLinks(){
+  // ห้ามใช้ JS redirect ไป leave/admin — ใช้ <a href> อย่างเดียว
+  el("btnLeave").href = API_URL + "?page=leave";
+  el("btnAdmin").href = API_URL + "?page=admin";
+  apiText.innerHTML = `<a class="link" href="${escapeHtml(API_URL)}" target="_blank" rel="noopener">${escapeHtml(API_URL)}</a>`;
+}
+refreshLinks();
+
+/** ============================
+ *  Settings Modal
+ *  ============================ */
+el("btnSettings").onclick = ()=>{ el("settingsBack").style.display="flex"; el("apiInput").value = API_URL; };
+el("btnCloseSettings").onclick = ()=> el("settingsBack").style.display="none";
+el("btnSaveSettings").onclick = ()=>{
+  const v = (el("apiInput").value||"").trim();
+  if(!v || !v.includes("/exec")){ alert("กรุณาใส่ URL ที่ลงท้ายด้วย /exec"); return; }
+  API_URL = v;
+  localStorage.setItem(LS_KEY, API_URL);
+  refreshLinks();
+  el("settingsBack").style.display="none";
+  logLine("บันทึก API URL แล้ว: " + API_URL, "ok");
+};
+el("btnTestPing").onclick = async ()=>{
+  try{
+    setPill("⏳ กำลังทดสอบ ping...", "warn");
+    const res = await fetch(API_URL + "?action=ping", { method:"GET" });
+    const j = await res.json();
+    if(j && j.ok){
+      setPill("✅ ping สำเร็จ", "ok");
+      logLine("ping: " + JSON.stringify(j.result), "ok");
+    }else{
+      setPill("❌ ping ไม่ผ่าน", "bad");
+      logLine("ping fail: " + JSON.stringify(j), "bad");
+    }
+  }catch(err){
+    setPill("❌ ping error", "bad");
+    logLine("ping error: " + err.message, "bad");
+  }
+};
+
+/** ============================
+ *  Manual Modal
+ *  ============================ */
+el("btnManual").onclick = ()=>{ el("manualBack").style.display="flex"; };
+el("btnCloseManual").onclick = ()=> el("manualBack").style.display="none";
+el("btnSubmitManual").onclick = submitManual;
+
+/** ============================
+ *  CAMERA + MODELS
+ *  ============================ */
+async function loadModels(){
+  setPill("⏳ กำลังโหลดโมเดลใบหน้า...", "warn");
+  await faceapi.nets.ssdMobilenetv1.loadFromUri(MODELS_URL);
+  await faceapi.nets.faceLandmark68Net.loadFromUri(MODELS_URL);
+  await faceapi.nets.faceRecognitionNet.loadFromUri(MODELS_URL);
+  modelsLoaded = true;
+  setPill("✅ โมเดลพร้อมใช้งาน", "ok");
+  logLine("โหลดโมเดลสำเร็จจาก: " + MODELS_URL, "ok");
+}
+
+async function startCamera(){
+  setPill("⏳ กำลังเปิดกล้อง...", "warn");
+  stream = await navigator.mediaDevices.getUserMedia({ video:{ facingMode:"user" }, audio:false });
+  video.srcObject = stream;
+  await new Promise(r=> video.onloadedmetadata = r);
+
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  detecting = true;
+  camText.textContent = "เปิดแล้ว";
+  setPill("✅ กล้องพร้อม", "ok");
+  detectLoop();
+}
+
+function stopCamera(){
+  detecting = false;
+  if(stream){
+    stream.getTracks().forEach(t=>t.stop());
+    stream = null;
+  }
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  camText.textContent = "ปิดแล้ว";
+  setPill("⛔ ปิดกล้องแล้ว", "warn");
+}
+
+async function detectLoop(){
+  if(!detecting || !modelsLoaded) return;
+  const det = await faceapi.detectSingleFace(video).withFaceLandmarks();
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  if(det){
+    const dims = faceapi.matchDimensions(canvas, video, true);
+    const resized = faceapi.resizeResults(det, dims);
+    faceapi.draw.drawDetections(canvas, [resized]);
+    faceapi.draw.drawFaceLandmarks(canvas, [resized]);
+  }
+  requestAnimationFrame(detectLoop);
+}
+
+/** ============================
+ *  FACE SCAN -> API faceCheckIn
+ *  ============================ */
+el("btnScan").onclick = captureAndCheckIn;
+el("btnStop").onclick = stopCamera;
+
+async function captureAndCheckIn(){
+  try{
+    if(!modelsLoaded){ alert("โมเดลยังไม่พร้อม"); return; }
+    if(!stream){ alert("กล้องยังไม่เปิด"); return; }
+
+    setPill("⏳ กำลังสแกนใบหน้า...", "warn");
+
+    const det = await faceapi.detectSingleFace(video).withFaceLandmarks().withFaceDescriptor();
+    if(!det){
+      setPill("❌ ไม่พบใบหน้า", "bad");
+      logLine("ไม่พบใบหน้า กรุณาหันหน้าตรง/แสงพอ", "bad");
+      return;
+    }
+    const descriptor = Array.from(det.descriptor);
+
+    const coords = await getGps();
+    const payload = {
+      action: "faceCheckIn",
+      faceDescriptor: descriptor,
+      lat: coords.latitude,
+      lng: coords.longitude
+    };
+
+    const j = await postJson(API_URL, payload);
+    if(j && j.ok){
+      setPill("✅ เข้างานสำเร็จ", "ok");
+      logLine(`สำเร็จ: ${j.result.fullName} (${j.result.code}) เวลา ${j.result.time} slot=${j.result.slot} dist=${j.result.distance}`, "ok");
+    }else{
+      setPill("❌ ไม่ผ่าน", "bad");
+      logLine("ไม่ผ่าน: " + (j.error || JSON.stringify(j)), "bad");
+      if(j && j.debug) logLine("debug: " + JSON.stringify(j.debug), "warn");
+    }
+
+  }catch(err){
+    setPill("❌ error", "bad");
+    logLine("error: " + err.message, "bad");
+  }
+}
+
+/** ============================
+ *  Manual -> API saveManualLog
+ *  ============================ */
+async function submitManual(){
+  try{
+    const code = (el("mCode").value||"").trim();
+    const note = (el("mNote").value||"").trim();
+    const file = el("mFile").files[0] || null;
+
+    if(!code){ alert("กรุณาใส่รหัสพนักงาน"); return; }
+
+    setPill("⏳ กำลังส่งบันทึกด้วยมือ...", "warn");
+    const coords = await getGps();
+
+    let evidenceBase64 = "";
+    let evidenceName = "";
+    if(file){
+      evidenceBase64 = await fileToDataUrl(file);
+      evidenceName = file.name || ("evidence_" + code + ".jpg");
+    }
+
+    const payload = {
+      action: "saveManualLog",
+      code,
+      note,
+      lat: coords.latitude,
+      lng: coords.longitude,
+      evidenceBase64,
+      evidenceName
+    };
+
+    const j = await postJson(API_URL, payload);
+    if(j && j.ok){
+      setPill("✅ บันทึกด้วยมือสำเร็จ", "ok");
+      logLine(`Manual OK: ${code} เวลา ${j.result.time} slot=${j.result.slot}`, "ok");
+      el("manualBack").style.display="none";
+    }else{
+      setPill("❌ Manual ไม่ผ่าน", "bad");
+      logLine("Manual fail: " + (j.error || JSON.stringify(j)), "bad");
+    }
+  }catch(err){
+    setPill("❌ Manual error", "bad");
+    logLine("Manual error: " + err.message, "bad");
+  }
+}
+
+/** ============================
+ *  Network / GPS helpers
+ *  ============================ */
+async function postJson(url, body){
+  const res = await fetch(url, {
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify(body)
+  });
+  return await res.json();
+}
+
+function getGps(){
+  return new Promise((resolve, reject)=>{
+    if(!navigator.geolocation) return reject(new Error("เครื่องนี้ไม่รองรับ GPS"));
+    navigator.geolocation.getCurrentPosition(
+      pos=>resolve(pos.coords),
+      err=>reject(new Error("GPS ไม่อนุญาต/ผิดพลาด: " + err.message)),
+      { enableHighAccuracy:true, timeout:12000 }
+    );
+  });
+}
+
+function fileToDataUrl(file){
+  return new Promise((resolve,reject)=>{
+    const reader = new FileReader();
+    reader.onload = ()=>resolve(String(reader.result||""));
+    reader.onerror = ()=>reject(new Error("อ่านไฟล์ไม่สำเร็จ"));
+    reader.readAsDataURL(file);
+  });
+}
+
+/** ============================
+ *  Boot
+ *  ============================ */
+(async function boot(){
+  try{
+    refreshLinks();
+    logLine("API URL: " + API_URL, "warn");
+    await loadModels();
+    await startCamera();
+    logLine("พร้อมใช้งาน: กด “สแกนใบหน้าเข้างาน” ได้เลย", "ok");
+  }catch(err){
+    setPill("❌ เริ่มระบบไม่สำเร็จ", "bad");
+    logLine("boot error: " + err.message, "bad");
+  }
+})();
+</script>
+</body>
+</html>
