@@ -924,11 +924,6 @@
                 <button class="btn primary" id="btnLoadInitSide" type="button">📥 โหลดรายชื่อ</button>
                 <button class="btn" id="btnClearLocal" type="button">🧹 ล้างสถานะ</button>
               </div>
-
-              <!-- แสดงรายชื่อ “วันนี้” (ดึงจาก Logs/Today Summary) -->
-              <div id="empListToday" style="margin-top:10px; max-height:260px; overflow:auto; border:1px solid #e5e7eb; border-radius:12px; padding:10px; background:#fff;">
-                <div class="small muted">ยังไม่มีรายการวันนี้ (กด “โหลดรายชื่อ”)</div>
-              </div>
             </div>
 
             <div class="info mt14">
@@ -1022,7 +1017,19 @@
     ;(() => {
       "use strict";
 
-      /** =============================
+      
+
+      // === Global error hooks (ดูได้ใน DevTools Console) ===
+      window.addEventListener('error', (ev) => {
+        try{ console.error('[UI:error]', ev?.message, ev?.error); }catch{}
+        try{ toast('❌ เกิดข้อผิดพลาด: ' + (ev?.message || 'unknown')); }catch{}
+      });
+      window.addEventListener('unhandledrejection', (ev) => {
+        try{ console.error('[UI:unhandledrejection]', ev?.reason); }catch{}
+        try{ toast('❌ Promise error: ' + (ev?.reason?.message || String(ev?.reason || 'unknown'))); }catch{}
+      });
+
+/** =============================
        *  ✅ CONFIG: เวลา “มาตรฐาน” ของ t1-t4
        *  ============================= */
       const SLOT_SCHEDULE = {
@@ -1035,7 +1042,38 @@
       };
 
       const LS_API = "attendance_api_url_v2";
-      const LS_LAST = "attendance_last_ui_log_v1";
+      
+
+      // === URL helpers: รองรับทั้งโหมดเปิดเป็นไฟล์/เว็บโฮสต์ และโหมดเปิดผ่าน Apps Script /exec?page=... ===
+      function inferExecFromLocation_(){
+        try{
+          const href = String(location.href||'');
+          // หา base ที่ลงท้ายด้วย /exec (ตัด query/hash ออก)
+          const m = href.match(/https?:\/\/[^#?]*\/exec/i);
+          return m ? m[0] : '';
+        }catch{ return ''; }
+      }
+
+      function normalizeExecUrl_(u){
+        u = String(u||'').trim();
+        if (!u) return '';
+        u = u.split('#')[0].split('?')[0];
+        return u;
+      }
+
+      function buildPageUrl_(page){
+        const base = normalizeExecUrl_(getApiUrl());
+        if (!base) return '';
+        return base + '?page=' + encodeURIComponent(page);
+      }
+
+      function navTo_(pageParam, fallbackFile){
+        const url = buildPageUrl_(pageParam);
+        if (url) { location.href = url; return; }
+        location.href = fallbackFile;
+      }
+
+const LS_LAST = "attendance_last_ui_log_v1";
       const LS_HR = "attendance_hr_token_v1";
       const LS_HR_OK = "attendance_hr_logged_v1";
 
@@ -1079,6 +1117,16 @@
       }
       $("toastClose")?.addEventListener("click", () => ($("toast").style.display = "none"));
 
+      // === Global error handlers (ช่วยให้เห็น error ชัดขึ้น) ===
+      window.addEventListener("error", (ev) => {
+        try { console.error('[UI error]', ev.error || ev.message || ev); } catch {}
+        try { toast('❌ เกิดข้อผิดพลาด: ' + (ev.message || 'unknown')); } catch {}
+      });
+      window.addEventListener("unhandledrejection", (ev) => {
+        try { console.error('[Unhandled promise]', ev.reason || ev); } catch {}
+        try { toast('❌ ระบบมีข้อผิดพลาด (Promise): ' + (ev.reason?.message || String(ev.reason || 'unknown'))); } catch {}
+      });
+
       function setBusy(v) {
         busy = v;
         const ids = [
@@ -1097,36 +1145,12 @@
         });
       }
 
-      // =============================
-      // API URL + Page Routing (สำคัญมาก: กัน 404 จาก GitHub Pages)
-      // =============================
-      // ✅ ค่าเริ่มต้น (ผู้ใช้ส่งมา)
-      const DEFAULT_EXEC = "https://script.google.com/macros/s/AKfycbxJ8Gwt4mwiz91Eca5-ezEo4FhrlehuJCyE9gIacaZoq3Qk1D6z5hZ2ztHDTAC2X28GlQ/exec";
-
-      function normalizeExecUrl(url){
-        const s = String(url || "").trim();
-        if(!s) return "";
-        // keep base /exec only
-        const base = s.split("?")[0].trim();
-        return base;
+      function getApiUrl() {
+        // ถ้ายังไม่ได้ตั้งค่าใน LocalStorage แต่เปิดหน้าอยู่บน /exec ให้ auto-detect
+        return (localStorage.getItem(LS_API) || inferExecFromLocation_() || '').trim();
       }
-      function getApiUrl(){
-        const saved = normalizeExecUrl(localStorage.getItem(LS_API));
-        return saved || normalizeExecUrl(DEFAULT_EXEC);
-      }
-      function setApiUrl(url){
-        localStorage.setItem(LS_API, normalizeExecUrl(url));
-        refreshApiUI();
-      }
-      function resetApiUrl(){
-        localStorage.removeItem(LS_API);
-        refreshApiUI();
-      }
-      function getPageUrl(page){
-        const base = getApiUrl();
-        if(!base) return "";
-        return `${base}?page=${encodeURIComponent(page || "index")}`;
-      }
+      function setApiUrl(url) { localStorage.setItem(LS_API, (url || "").trim()); refreshApiUI(); }
+      function resetApiUrl() { localStorage.removeItem(LS_API); refreshApiUI(); }
 
       function setApiState(state, text) {
         const mDot = $("mDot"), mTxt = $("mApiText");
@@ -1219,9 +1243,10 @@
         // กันลืมปิดกล้องก่อนย้ายหน้า
         try{ stopFace(); }catch{}
         try{ stopReg(); }catch{}
-        const u = getPageUrl("leave");
-        if(!u) return toast("ยังไม่ได้ตั้งค่า URL /exec");
-        location.href = u;
+
+        const url = buildNavUrl_("leave", "./leave.html");
+        if (!url) return toast("ยังไม่ได้ตั้งค่า URL /exec (ไปเมนู ⚙️ แล้ววางลิงก์ /exec)");
+        location.href = url;
       }
       $("tabGoLeave")?.addEventListener("click", goLeave);
       $("bnGoLeave")?.addEventListener("click", goLeave);
@@ -1235,6 +1260,7 @@
 
       async function postAction(action, params = {}) {
         const url = getApiUrl();
+        console.log('[API] action=', action, params);
         if (!url) throw new Error("ยังไม่ได้ตั้งค่า URL /exec");
 
         const body = new URLSearchParams();
@@ -1249,9 +1275,12 @@
 
         let json;
         try { json = JSON.parse(text); } catch { json = { ok:false, raw:text }; }
+        if (json && json.ok !== true) {
+          console.warn('[API] not ok:', action, json);
+        }
 
         if (!res.ok) throw new Error("HTTP " + res.status);
-        if (!json || json.ok !== true) throw new Error(json?.error || "ตอบกลับไม่ถูกต้อง");
+        if (!json || json.ok !== true) throw new Error((json?.error || "ตอบกลับไม่ถูกต้อง") + " (action=" + action + ")");
         return json.result;
       }
 
@@ -1445,78 +1474,6 @@
         dl.innerHTML = list.map(x => `<option value="${escapeHtml(x.code)}">${escapeHtml(x.name)}</option>`).join("");
       }
 
-      // =============================
-      // Today list (ดึงจาก Logs ของ “วันนี้”)
-      // ใช้เพื่อแสดงรายชื่อพนักงานจาก getTodaySummary (ทั้ง “มา/ขาด/ลา/สาย”)
-      // =============================
-      function renderTodayList(rows){
-        const box = $("empListToday");
-        if(!box) return;
-        const arr = Array.isArray(rows) ? rows : [];
-        if(arr.length === 0){
-          box.innerHTML = `<div class="small muted">ยังไม่มีรายการวันนี้</div>`;
-          return;
-        }
-
-        // ตัวอย่างแถว: {code, fullName, branch, level, status, t1,t2,t3,t4}
-        const items = arr
-          .map(r => ({
-            code: String(r.code||"").trim(),
-            name: String(r.fullName||"").trim(),
-            branch: String(r.branch||"").trim(),
-            status: String(r.status||"").trim(),
-            t1: String(r.t1||"").trim(),
-            t2: String(r.t2||"").trim(),
-            t3: String(r.t3||"").trim(),
-            t4: String(r.t4||"").trim()
-          }))
-          .filter(x => x.code);
-
-        const count = items.length;
-        const html = items.map(x => {
-          const st = escapeHtml(x.status || "-");
-          const nm = escapeHtml(x.name || "-");
-          const br = escapeHtml(x.branch || "-");
-          // แสดงเวลาแบบย่อ (ถ้ามี)
-          const times = [x.t1,x.t2,x.t3,x.t4].filter(Boolean).join(" • ");
-          const timeHtml = times ? `<div style="font-size:12px; color:#64748b; margin-top:2px;">${escapeHtml(times)}</div>` : "";
-          return `
-            <div style="padding:8px 6px; border-bottom:1px dashed #e5e7eb;">
-              <div style="display:flex; justify-content:space-between; gap:8px;">
-                <div style="min-width:0;">
-                  <div style="font-weight:600; font-size:13px;">${escapeHtml(x.code)} • ${nm}</div>
-                  <div style="font-size:12px; color:#64748b;">${br}</div>
-                  ${timeHtml}
-                </div>
-                <div style="white-space:nowrap; font-size:12px; padding:6px 10px; border-radius:999px; border:1px solid #e2e8f0; height:fit-content;">${st}</div>
-              </div>
-            </div>
-          `;
-        }).join("");
-
-        box.innerHTML = `
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-            <div style="font-weight:700; font-size:13px;">รายชื่อวันนี้ (${count})</div>
-            <button class="btn" type="button" id="btnRefreshTodayList" style="padding:6px 10px; font-size:12px;">รีเฟรช</button>
-          </div>
-          <div>${html}</div>
-        `;
-
-        // bind refresh
-        const b = $("btnRefreshTodayList");
-        b?.addEventListener("click", () => loadTodayList());
-      }
-
-      async function loadTodayList(){
-        try{
-          const res = await postAction("getTodaySummary", {});
-          renderTodayList(res?.rows || []);
-        }catch(e){
-          const box = $("empListToday");
-          if(box) box.innerHTML = `<div class="small" style="color:#b91c1c;">โหลดรายชื่อวันนี้ไม่สำเร็จ: ${escapeHtml(e.message||"error")}</div>`;
-        }
-      }
-
       async function loadInitial(){
         try{
           setBusy(true);
@@ -1524,8 +1481,6 @@
           employeesCache = res?.employees || [];
           fillCodes(employeesCache);
           if (await loadFaceModels()) rebuildFaceMatcher();
-          // แสดงรายชื่อจาก Logs ของ “วันนี้” (ตามที่ผู้ใช้ต้องการ)
-          await loadTodayList();
           toast("โหลดรายชื่อแล้ว ✅");
         }catch(e){
           toast("โหลดรายชื่อไม่สำเร็จ: " + e.message);
@@ -2071,10 +2026,7 @@
 
       $("btnGoAdmin")?.addEventListener("click", () => {
         if (!isHrLoggedIn()) return toast("ต้องล็อกอิน HR ก่อน");
-        // ✅ กัน 404 บน GitHub Pages: ไป Apps Script ตรงๆ
-        const u = getPageUrl("admin");
-        if(!u) return toast("ยังไม่ได้ตั้งค่า URL /exec");
-        location.href = u;
+        navTo_("admin", "./admin.html");
       });
 
       function stopReg(){
